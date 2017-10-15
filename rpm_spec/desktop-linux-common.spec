@@ -95,7 +95,7 @@ fi
 %files
 %defattr(-,root,root,-)
 %{_bindir}/qvm-xkill
-%{_mandir}/man1/{qubes,qvm}-*.1*
+%{_mandir}/man1/qvm-*.1*
 %dir %{python3_sitelib}/qubesdesktop-*.egg-info
 %{python3_sitelib}/qubesdesktop-*.egg-info/*
 %dir %{python3_sitelib}/qubesappmenus
