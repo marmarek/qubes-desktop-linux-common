@@ -382,7 +382,7 @@ class Appmenus(object):
 
         :param src: source VM to copy data from
         '''
-        os.makedirs(os.path.join(basedir, vm.name))
+        os.makedirs(os.path.join(basedir, vm.name), exist_ok=True)
         if src is None:
             try:
                 src = vm.template
@@ -567,7 +567,10 @@ def main(args=None, app=None):
         if args.remove:
             appmenus.appmenus_remove(vm)
             appmenus.appicons_remove(vm)
-            shutil.rmtree(os.path.join(basedir, str(vm)))
+            try:
+                shutil.rmtree(os.path.join(basedir, str(vm)))
+            except FileNotFoundError:
+                pass
         # for other actions - get VM object
         if args.init or args.create or args.update or args.set_whitelist or \
                 args.set_default_whitelist or args.get_whitelist or \
