@@ -58,6 +58,9 @@ class TestVM(object):
     def is_running(self):
         return self.running
 
+    def __str__(self):
+        return self.name
+
 VMPREFIX = 'test-'
 
 class TC_00_Appmenus(unittest.TestCase):
@@ -224,6 +227,8 @@ class TC_00_Appmenus(unittest.TestCase):
             'Categories=GNOME;GTK;Office;Viewer;Graphics;2DGraphics'
             ';VectorGraphics;X-Qubes-VM;\n'
             'Exec=qvm-run -q -a --service -- %VMNAME% qubes.StartApp+evince\n'
+            'X-Qubes-DispvmExec=qvm-run -q -a --dispvm=%VMNAME% --service -- '
+            'qubes.StartApp+evince\n'
         )
         with tempfile.TemporaryDirectory() as tmpdir:
             path = os.path.join(tmpdir, 'evince.desktop')
@@ -255,6 +260,8 @@ class TC_00_Appmenus(unittest.TestCase):
             ';VectorGraphics;X-Qubes-VM;\n'
             'Exec=qvm-run -q -a %VMNAME% -- \'qubes-desktop-run '
             '/usr/share/applications/evince.desktop\'\n'
+            'X-Qubes-DispvmExec=qvm-run -q -a --dispvm=%VMNAME% -- '
+            '\'qubes-desktop-run /usr/share/applications/evince.desktop\'\n'
         )
         with tempfile.TemporaryDirectory() as tmpdir:
             path = os.path.join(tmpdir, 'evince.desktop')

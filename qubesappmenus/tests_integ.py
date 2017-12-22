@@ -19,7 +19,11 @@
 # with this program; if not, see <http://www.gnu.org/licenses/>.
 
 import os
+
+import asyncio
 import xdg
+import xdg.DesktopEntry
+import unittest
 
 import qubes
 import qubes.tests
@@ -50,13 +54,13 @@ class TC_10_AppmenusIntegration(qubes.tests.extra.ExtraTestCase):
     def get_whitelist(self, whitelist_path):
         self.assertPathExists(whitelist_path)
         with open(whitelist_path) as f:
-            whitelisted = [x.rstrip() for x in f.readlines()]
+            whitelisted = [x.rstrip() for x in f.readlines() if x.rstrip()]
         return whitelisted
 
     def test_000_created(self, vm=None):
         if vm is None:
             vm = self.vm
-        whitelist_path = os.path.join(vm.dir_path,
+        whitelist_path = os.path.join(qubesappmenus.basedir, vm.name,
             qubesappmenus.AppmenusSubdirs.whitelist)
         whitelisted = self.get_whitelist(whitelist_path)
         self.assertPathExists(self.appmenus.appmenus_dir(vm))
@@ -65,8 +69,8 @@ class TC_10_AppmenusIntegration(qubes.tests.extra.ExtraTestCase):
         appmenus = [x[len(vm.name) + 1:] for x in appmenus]
         self.assertIn('vm.directory', appmenus)
         appmenus.remove('vm.directory')
-        self.assertIn('qubes-appmenu-select.desktop', appmenus)
-        appmenus.remove('qubes-appmenu-select.desktop')
+        self.assertIn('qubes-vm-settings.desktop', appmenus)
+        appmenus.remove('qubes-vm-settings.desktop')
         self.assertEquals(set(whitelisted), set(appmenus))
         self.assertPathExists(self.appmenus.icons_dir(vm))
         appicons = os.listdir(self.appmenus.icons_dir(vm))
@@ -81,7 +85,7 @@ class TC_10_AppmenusIntegration(qubes.tests.extra.ExtraTestCase):
 
     def test_001_created_registered(self):
         """Check whether appmenus was registered in desktop environment"""
-        whitelist_path = os.path.join(self.vm.dir_path,
+        whitelist_path = os.path.join(qubesappmenus.basedir, self.vm.name,
             qubesappmenus.AppmenusSubdirs.whitelist)
         if not os.path.exists(whitelist_path):
             self.skipTest("Appmenus whitelist does not exists")
@@ -98,12 +102,12 @@ class TC_10_AppmenusIntegration(qubes.tests.extra.ExtraTestCase):
 
     def test_002_unregistered_after_remove(self):
         """Check whether appmenus was unregistered after VM removal"""
-        whitelist_path = os.path.join(self.vm.dir_path,
+        whitelist_path = os.path.join(qubesappmenus.basedir, self.vm.name,
             qubesappmenus.AppmenusSubdirs.whitelist)
         if not os.path.exists(whitelist_path):
             self.skipTest("Appmenus whitelist does not exists")
         whitelisted = self.get_whitelist(whitelist_path)
-        self.vm.remove_from_disk()
+        self.loop.run_until_complete(self.vm.remove_from_disk())
         for appmenu in whitelisted:
             if appmenu.endswith('.directory'):
                 subdir = 'desktop-directories'
@@ -116,17 +120,18 @@ class TC_10_AppmenusIntegration(qubes.tests.extra.ExtraTestCase):
     def test_003_created_template_empty(self):
         tpl = self.app.add_new_vm(qubes.vm.templatevm.TemplateVM,
             name=self.make_vm_name('tpl'), label='red')
-        tpl.create_on_disk()
+        self.loop.run_until_complete(tpl.create_on_disk())
         self.assertPathExists(self.appmenus.templates_dir(tpl))
         self.assertPathExists(self.appmenus.template_icons_dir(tpl))
 
     def test_004_created_template_from_other(self):
         tpl = self.app.add_new_vm(qubes.vm.templatevm.TemplateVM,
             name=self.make_vm_name('tpl'), label='red')
-        tpl.clone_disk_files(self.app.default_template)
+        self.loop.run_until_complete(tpl.clone_disk_files(
+            self.app.default_template))
         self.assertPathExists(self.appmenus.templates_dir(tpl))
         self.assertPathExists(self.appmenus.template_icons_dir(tpl))
-        self.assertPathExists(os.path.join(tpl.dir_path,
+        self.assertPathExists(os.path.join(qubesappmenus.basedir, tpl.name,
             qubesappmenus.AppmenusSubdirs.whitelist))
 
         for appmenu in os.listdir(self.appmenus.templates_dir(
@@ -143,11 +148,11 @@ class TC_10_AppmenusIntegration(qubes.tests.extra.ExtraTestCase):
         """Return mean color of the image as (r, g, b) in float"""
         image = qubesimgconverter.Image.load_from_file(path)
         _, l, _ = colorsys.rgb_to_hls(
-            *qubesimgconverter.hex_to_float(expected_color))
+            *[c / 256.0 for c in qubesimgconverter.hex_to_int(expected_color)])
 
         def get_hls(pixels, l):
             for i in range(0, len(pixels), 4):
-                r, g, b, a = tuple(ord(c) / 255. for c in pixels[i:i + 4])
+                r, g, b, a = tuple(c / 255. for c in pixels[i:i + 4])
                 if a == 0.0:
                     continue
                 h, _, s = colorsys.rgb_to_hls(r, g, b)
@@ -158,14 +163,15 @@ class TC_10_AppmenusIntegration(qubes.tests.extra.ExtraTestCase):
             get_hls(image.data, l),
             (0, 0, 0)
         )
-        mean_hls = map(lambda x: x / (mean_hls[1] / l), mean_hls)
+        mean_hls = [x / (mean_hls[1] / l) for x in mean_hls]
         image_color = colorsys.hls_to_rgb(*mean_hls)
         return image_color
 
     def assertIconColor(self, path, expected_color):
         image_color_float = self.get_image_color(path, expected_color)
-        expected_color_float = qubesimgconverter.hex_to_float(expected_color)
-        if not all(map(lambda a, b: abs(a - b) <= 0.15,
+        expected_color_float = [c / 256.0 for c in qubesimgconverter.hex_to_int(
+            expected_color)]
+        if not all(map(lambda a, b: abs(a - b) <= 0.2,
                 image_color_float, expected_color_float)):
             self.fail(
                 "Icon {} is not colored as {}".format(path, expected_color))
@@ -182,14 +188,18 @@ class TC_10_AppmenusIntegration(qubes.tests.extra.ExtraTestCase):
     def test_011_icon_color_label_change(self):
         """Regression test for #1606"""
         self.vm.label = 'green'
+        # icon coloring is launched in the background asynchronously
+        self.loop.run_until_complete(asyncio.sleep(2))
         self.test_010_icon_color()
 
+    @unittest.skip('real clone is gone')
     def test_020_clone(self):
         vm2 = self.app.add_new_vm(qubes.vm.appvm.AppVM,
             name=self.make_vm_name('vm2'), label='green')
 
         vm2.clone_properties(self.vm)
-        vm2.clone_disk_files(self.vm)
+        # applications whitelist is not preserved
+        self.loop.run_until_complete(vm2.clone_disk_files(self.vm))
         self.test_000_created(vm=vm2)
         self.test_010_icon_color(vm=vm2)
 
