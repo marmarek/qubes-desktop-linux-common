@@ -485,28 +485,6 @@ class Appmenus(object):
             subprocess.call([
                 'kbuildsycoca' + os.environ.get('KDE_SESSION_VERSION', '4')])
 
-        # Apparently desktop environments heavily caches the icons,
-        # see #751 for details
-        if "plasma" in os.environ.get("DESKTOP_SESSION", ""):
-            try:
-                os.unlink(os.path.expandvars(
-                    "$HOME/.kde/cache-$HOSTNAME/icon-cache.kcache"))
-            except:
-                pass
-            try:
-                notify_object = dbus.SessionBus().get_object(
-                    "org.freedesktop.Notifications",
-                    "/org/freedesktop/Notifications")
-                notify_object.Notify(
-                    "Qubes", 0, vm.label.icon, "Qubes",
-                    "You will need to log off and log in again for the VM icons "
-                    "to update in the KDE launcher menu",
-                    [], [], 10000,
-                    dbus_interface="org.freedesktop.Notifications")
-            except:
-                pass
-
-
 parser = qubesadmin.tools.QubesArgumentParser()
 
 parser_stdin_mode = parser.add_mutually_exclusive_group()
