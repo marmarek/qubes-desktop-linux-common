@@ -84,29 +84,26 @@ class AppmenusExtension(qubes.ext.Extension):
         asyncio.ensure_future(self.run_as_user(
             ['qvm-appmenus', '--quiet', '--force', '--update', vm.name]))
 
-    @qubes.ext.handler('domain-feature-delete')
+    @qubes.ext.handler('domain-feature-delete:appmenus-dispvm')
     def on_feature_del_appmenus_dispvm(self, vm, event, feature):
-        if feature == 'appmenus-dispvm':
-            asyncio.ensure_future(self.run_as_user(
-                ['qvm-appmenus', '--quiet', '--force', '--update', vm.name]))
+        asyncio.ensure_future(self.run_as_user(
+            ['qvm-appmenus', '--quiet', '--force', '--update', vm.name]))
 
-    @qubes.ext.handler('domain-feature-set')
+    @qubes.ext.handler('domain-feature-set:appmenus-dispvm')
     def on_feature_set_appmenus_dispvm(self, vm, event, feature,
             value, oldvalue=None):
-        if feature == 'appmenus-dispvm':
-            asyncio.ensure_future(self.run_as_user(
-                ['qvm-appmenus', '--quiet', '--force', '--update', vm.name]))
+        asyncio.ensure_future(self.run_as_user(
+            ['qvm-appmenus', '--quiet', '--force', '--update', vm.name]))
 
-    @qubes.ext.handler('domain-feature-delete')
+    @qubes.ext.handler('domain-feature-delete:internal')
     def on_feature_del_internal(self, vm, event, feature):
-        if feature == 'internal':
-            asyncio.ensure_future(self.run_as_user(
-                ['qvm-appmenus', '--quiet', '--create', vm.name]))
+        asyncio.ensure_future(self.run_as_user(
+            ['qvm-appmenus', '--quiet', '--create', vm.name]))
 
-    @qubes.ext.handler('domain-feature-set')
+    @qubes.ext.handler('domain-feature-set:internal')
     def on_feature_set_internal(self, vm, event, feature, value,
             oldvalue=None):
-        if feature == 'internal':
+        if value:
             asyncio.ensure_future(self.run_as_user(
                 ['qvm-appmenus', '--quiet', '--remove', vm.name]))
 
