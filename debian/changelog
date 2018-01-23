@@ -1,3 +1,25 @@
+qubes-desktop-linux-common (4.0.9-1) unstable; urgency=medium
+
+  [ Marek Marczykowski-Górecki ]
+  * appmenus: don't fail on creating/removing appmenus directories
+  * tests: fix both unit tests and integration tests
+
+  [ Jean-Philippe Ouellet ]
+  * Remove dead appmenu handling code
+
+  [ TomZ ]
+  * Remove unneeded warning/removal of icon-cache
+
+  [ Jean-Philippe Ouellet ]
+  * Adjust feature-set handler to match reality
+  * Regen appmenus on changing appmenus-dispvm feature
+  * Properly handle unsetting 'internal'
+
+  [ Marek Marczykowski-Górecki ]
+  * appmenus: update event names one more time
+
+ -- Marek Marczykowski-Górecki <marmarek@invisiblethingslab.com>  Tue, 23 Jan 2018 14:17:37 +0100
+
 qubes-desktop-linux-common (4.0.8-1) unstable; urgency=medium
 
   [ Arjan Schrijver ]
