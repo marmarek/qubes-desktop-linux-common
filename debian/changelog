@@ -1,3 +1,9 @@
+qubes-desktop-linux-common (4.0.11-1) unstable; urgency=medium
+
+  * debian: fix file list
+
+ -- Marek Marczykowski-Górecki <marmarek@invisiblethingslab.com>  Sat, 27 Jan 2018 03:08:10 +0100
+
 qubes-desktop-linux-common (4.0.10-1) unstable; urgency=medium
 
   * appmenus: remove unused files
