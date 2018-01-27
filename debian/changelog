@@ -1,3 +1,10 @@
+qubes-desktop-linux-common (4.0.10-1) unstable; urgency=medium
+
+  * appmenus: remove unused files
+  * appmenus: rename "VM Settings" to "Qube Settings"
+
+ -- Marek Marczykowski-Górecki <marmarek@invisiblethingslab.com>  Sat, 27 Jan 2018 02:49:19 +0100
+
 qubes-desktop-linux-common (4.0.9-1) unstable; urgency=medium
 
   [ Marek Marczykowski-Górecki ]
