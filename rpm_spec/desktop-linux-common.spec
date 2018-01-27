@@ -107,9 +107,6 @@ fi
 %{python3_sitelib}/qubesappmenusext/__init__.py
 
 /etc/qubes-rpc/qubes.SyncAppMenus
-/usr/share/qubes-appmenus/qubes-dispvm-firefox.desktop
-/usr/share/qubes-appmenus/qubes-dispvm-xterm.desktop
-/usr/share/qubes-appmenus/qubes-dispvm.directory
 /usr/share/qubes-appmenus/qubes-start.desktop
 /usr/share/qubes-appmenus/hvm
 /usr/share/qubes/icons/*.png
