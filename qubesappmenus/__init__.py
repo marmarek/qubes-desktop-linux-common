@@ -242,7 +242,10 @@ class Appmenus(object):
                 vm.log.warning("Problem removing old appmenus")
 
             for appmenu in appmenus_to_remove_fnames:
-                os.unlink(appmenu)
+                try:
+                    os.unlink(appmenu)
+                except FileNotFoundError:
+                    pass
 
         # add new entries
         if anything_changed or force:
