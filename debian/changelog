@@ -1,3 +1,14 @@
+qubes-desktop-linux-common (4.0.12-1) unstable; urgency=medium
+
+  [ Marek Marczykowski-Górecki ]
+  * appmenus: don't fail on removal already removed menu file
+
+  [ Frédéric Pierret ]
+  * Add CentOS support (fix python3 dependencies)
+  * Fix %files for mandir files
+
+ -- Marek Marczykowski-Górecki <marmarek@invisiblethingslab.com>  Tue, 27 Feb 2018 21:08:36 +0100
+
 qubes-desktop-linux-common (4.0.11-1) unstable; urgency=medium
 
   * debian: fix file list
