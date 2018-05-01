@@ -227,7 +227,7 @@ class TC_00_Appmenus(unittest.TestCase):
             'Categories=GNOME;GTK;Office;Viewer;Graphics;2DGraphics'
             ';VectorGraphics;X-Qubes-VM;\n'
             'Exec=qvm-run -q -a --service -- %VMNAME% qubes.StartApp+evince\n'
-            'X-Qubes-DispvmExec=qvm-run -q -a --dispvm=%VMNAME% --service -- '
+            'X-Qubes-DispvmExec=qvm-run -q -a --service --dispvm=%VMNAME% -- '
             'qubes.StartApp+evince\n'
         )
         with tempfile.TemporaryDirectory() as tmpdir:
