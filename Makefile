@@ -22,3 +22,8 @@ install:
 	cp -r appmenus-files/* $(DESTDIR)/usr/share/qubes-appmenus/
 
 	$(MAKE) -C qubes-menus install
+
+clean:
+	rm -rf qubesappmenus/__pycache__
+	rm -rf qubesappmenusext/__pycache__
+	rm -f .coverage
