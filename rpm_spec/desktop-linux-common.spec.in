@@ -1,9 +1,7 @@
-%{!?version: %define version %(cat version)}
-
 %define desktop_file_utils_version 0.9
 
 Name:		qubes-desktop-linux-common
-Version:	%{version}
+Version:	@VERSION@
 Release:	1%{?dist}
 Summary:	Common code used for multiple desktop environments' Qubes integration
 
@@ -11,6 +9,7 @@ Group:		Qubes
 Vendor:		Invisible Things Lab
 License:	GPL
 URL:		http://www.qubes-os.org
+Source0:	%{name}-%{version}.tar.gz
 
 BuildArch:	noarch
 BuildRequires:	pandoc
@@ -36,8 +35,6 @@ Requires:	python3-pyxdg
 %endif
 Requires:   qubes-manager
 
-%define _builddir %(pwd)
-
 %description
 Common code used for multiple desktop environments' Qubes integration
 
@@ -62,6 +59,8 @@ This package contains the XML files that describe the menu layout for
 GNOME and KDE, and the .desktop files that define the names and icons
 of "subdirectories" in the menus.
 
+%prep
+%setup -q
 
 %build
 make
