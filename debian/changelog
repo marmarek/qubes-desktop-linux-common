@@ -1,3 +1,13 @@
+qubes-desktop-linux-common (4.0.13-1) unstable; urgency=medium
+
+  * tests: fix X-Qubes-DispvmExec pattern
+  * rpm: Create spec.in and Source0
+  * Add make clean target to make debian build happy
+  * travis: update Fedora versions, add CentOS 7
+  * rpm: add missing BR: python3-setuptools
+
+ -- Marek Marczykowski-Górecki <marmarek@invisiblethingslab.com>  Wed, 02 May 2018 21:18:43 +0200
+
 qubes-desktop-linux-common (4.0.12-1) unstable; urgency=medium
 
   [ Marek Marczykowski-Górecki ]
