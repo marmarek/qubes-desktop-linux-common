@@ -16,9 +16,11 @@ BuildRequires:	pandoc
 %if 0%{?rhel} >= 7
 BuildRequires:	python34
 BuildRequires:	python34-devel
+BuildRequires:	python34-setuptools
 %else
 BuildRequires:	python3
 BuildRequires:	python3-devel
+BuildRequires:	python3-setuptools
 %endif
 BuildRequires:	ImageMagick
 BuildRequires: desktop-file-utils >= %{desktop_file_utils_version}
