@@ -120,7 +120,7 @@ def fallback_hvm_appmenulist():
     p = subprocess.Popen(["grep", "-rH", "=", "/usr/share/qubes-appmenus/hvm"],
                          stdout=subprocess.PIPE)
     (stdout, stderr) = p.communicate()
-    return stdout.splitlines()
+    return stdout.decode().splitlines()
 
 
 def get_appmenus(vm):
