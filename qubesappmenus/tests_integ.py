@@ -171,7 +171,7 @@ class TC_10_AppmenusIntegration(qubes.tests.extra.ExtraTestCase):
         image_color_float = self.get_image_color(path, expected_color)
         expected_color_float = [c / 256.0 for c in qubesimgconverter.hex_to_int(
             expected_color)]
-        if not all(map(lambda a, b: abs(a - b) <= 0.2,
+        if not all(map(lambda a, b: abs(a - b) <= 0.25,
                 image_color_float, expected_color_float)):
             self.fail(
                 "Icon {} is not colored as {}".format(path, expected_color))
