@@ -22,7 +22,6 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301,
 # USA.
 
-import colorsys
 import io
 import os
 import tempfile
@@ -32,7 +31,6 @@ import unittest.mock
 import pkg_resources
 import qubesappmenus
 import qubesappmenus.receive
-import qubesimgconverter
 
 class Label(object):
     def __init__(self, index, color, name):

@@ -20,12 +20,13 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301,
 # USA.
 
+'''Handle menu entries for starting applications in qubes'''
+
 import subprocess
 import sys
 import os
 import os.path
 import shutil
-import dbus
 import logging
 
 import itertools
@@ -52,6 +53,8 @@ class DispvmNotSupportedError(qubesadmin.exc.QubesException):
 
 
 class AppmenusSubdirs:
+    '''Common directory names'''
+    # pylint: disable=too-few-public-methods
     templates_subdir = 'apps.templates'
     template_icons_subdir = 'apps.tempicons'
     subdir = 'apps'
@@ -61,11 +64,14 @@ class AppmenusSubdirs:
 
 
 class AppmenusPaths:
+    '''Predefined menu entries'''
+    # pylint: disable=too-few-public-methods
     appmenu_start_hvm_template = \
         '/usr/share/qubes-appmenus/qubes-start.desktop'
 
 
 class Appmenus(object):
+    '''Main class for menu entries handling'''
     def templates_dirs(self, vm):
         """
 
@@ -89,37 +95,42 @@ class Appmenus(object):
             dirs.extend(self.template_icons_dirs(vm.template))
         return dirs
 
-    def template_for_file(self, template_dirs, name):
+    @staticmethod
+    def template_for_file(template_dirs, name):
         '''Find first template named *name* in *template_dirs*'''
-        for d in template_dirs:
-            path = os.path.join(d, name)
+        for tpl_dir in template_dirs:
+            path = os.path.join(tpl_dir, name)
             if os.path.exists(path):
                 return path
 
-    def appmenus_dir(self, vm):
+    @staticmethod
+    def appmenus_dir(vm):
         '''Desktop files generated for particular VM'''
         return os.path.join(basedir, str(vm), AppmenusSubdirs.subdir)
 
-    def icons_dir(self, vm):
+    @staticmethod
+    def icons_dir(vm):
         '''Icon files generated (colored) for particular VM'''
         return os.path.join(basedir, str(vm), AppmenusSubdirs.icons_subdir)
 
-    def whitelist_path(self, vm):
+    @staticmethod
+    def whitelist_path(vm):
         '''File listing files wanted in menu'''
         return os.path.join(basedir, str(vm), AppmenusSubdirs.whitelist)
 
-    def directory_template_name(self, vm, dispvm):
+    @staticmethod
+    def directory_template_name(vm, dispvm):
         '''File name of desktop directory entry template'''
         if dispvm:
             return 'qubes-dispvm.directory.template'
-        elif vm.klass == 'TemplateVM':
+        if vm.klass == 'TemplateVM':
             return 'qubes-templatevm.directory.template'
-        elif vm.provides_network:
+        if vm.provides_network:
             return 'qubes-servicevm.directory.template'
-        else:
-            return 'qubes-vm.directory.template'
+        return 'qubes-vm.directory.template'
 
-    def write_desktop_file(self, vm, source, destination_path, dispvm=False):
+    @staticmethod
+    def write_desktop_file(vm, source, destination_path, dispvm=False):
         """Format .desktop/.directory file
 
         :param vm: QubesVM object for which write desktop file
@@ -149,8 +160,8 @@ class Appmenus(object):
                 current_dest = dest_f.read()
                 if current_dest == data:
                     return False
-        with open(destination_path, "w") as f:
-            f.write(data)
+        with open(destination_path, "w") as dest_f:
+            dest_f.write(data)
         return True
 
     def get_available_filenames(self, vm):
@@ -169,6 +180,9 @@ class Appmenus(object):
                 yield os.path.join(template_dir, filename)
 
     def get_available(self, vm):
+        '''Get available menu entries for given VM
+
+        Returns a generator of (filename, display_name) tuples'''
         # TODO icon path (#2885)
         for filename in self.get_available_filenames(vm):
             with open(filename) as file:
@@ -458,7 +472,8 @@ class Appmenus(object):
                 shutil.copytree(src_dir,
                                 own_template_icons_dir)
 
-    def set_default_whitelist(self, vm, applications_list):
+    @staticmethod
+    def set_default_whitelist(vm, applications_list):
         '''Update default applications list for VMs created on this template
 
         :param vm: VM object
@@ -507,7 +522,7 @@ class Appmenus(object):
                 try:
                     self.appicons_create(child_vm, force=force)
                     self.appmenus_create(child_vm, refresh_cache=False)
-                except Exception as e:
+                except Exception as e:  # pylint: disable=broad-except
                     child_vm.log.error("Failed to recreate appmenus for "
                                        "'{0}': {1}".format(child_vm.name,
                         str(e)))
@@ -532,10 +547,12 @@ parser.add_argument('--get-available', action='store_true',
     help='Get list of applications available')
 parser.add_argument('--get-whitelist', action='store_true',
     help='Get list of applications to include in the menu')
-parser_stdin_mode.add_argument('--set-whitelist', metavar='PATH', action='store',
+parser_stdin_mode.add_argument('--set-whitelist', metavar='PATH',
+    action='store',
     help='Set list of applications to include in the menu,'
          'use \'-\' to read from stdin')
-parser_stdin_mode.add_argument('--set-default-whitelist', metavar='PATH', action='store',
+parser_stdin_mode.add_argument('--set-default-whitelist', metavar='PATH',
+    action='store',
     help='Set default list of applications to include in menu '
          'for VMs based on this template,'
          'use \'-\' to read from stdin')
@@ -559,12 +576,12 @@ def retrieve_list(path):
     '''
     if path == '-':
         return sys.stdin.readlines()
-    else:
-        with open(path, 'r') as file:
-            return file.readlines()
+    with open(path, 'r') as file:
+        return file.readlines()
 
 
 def main(args=None, app=None):
+    '''main function for qvm-appmenus tool'''
     args = parser.parse_args(args=args, app=app)
     appmenus = Appmenus()
     if args.source is not None:
@@ -581,9 +598,7 @@ def main(args=None, app=None):
             except FileNotFoundError:
                 pass
         # for other actions - get VM object
-        if args.init or args.create or args.update or args.set_whitelist or \
-                args.set_default_whitelist or args.get_whitelist or \
-                args.get_available:
+        if not args.remove:
             vm = args.app.domains[vm]
             if args.init:
                 appmenus.appmenus_init(vm, src=args.source)

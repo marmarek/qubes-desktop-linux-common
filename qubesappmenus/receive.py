@@ -17,9 +17,11 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301,
+# USA.
 #
-#
+
+'''Retrieve menu entries from a VM and convert to appmenu templates'''
 
 import subprocess
 import re
@@ -110,6 +112,9 @@ CATEGORIES_WHITELIST = {
 
 
 def sanitise_categories(untrusted_value):
+    '''Sanitise Categories= entry of desktop file.
+    Allow only categories explicitly listed by the specification
+    '''
     untrusted_categories = (c.strip() for c in untrusted_value.split(';') if c)
     categories = (c for c in untrusted_categories if c in CATEGORIES_WHITELIST)
 
@@ -117,13 +122,17 @@ def sanitise_categories(untrusted_value):
 
 
 def fallback_hvm_appmenulist():
+    '''List default menu entries to be created for HVM'''
     p = subprocess.Popen(["grep", "-rH", "=", "/usr/share/qubes-appmenus/hvm"],
                          stdout=subprocess.PIPE)
-    (stdout, stderr) = p.communicate()
+    (stdout, _) = p.communicate()
     return stdout.decode().splitlines()
 
 
 def get_appmenus(vm):
+    '''Get appmenus from a *vm*. *vm* can be :py:obj:None to retrieve data
+    from stdin - should be a `qubes.GetAppmenus` service in the VM connected
+    to it.'''
     appmenus_line_limit_left = appmenus_line_count
     untrusted_appmenulist = []
     if vm is None:
@@ -166,7 +175,7 @@ def get_appmenus(vm):
     ignore_rx = re.compile(r".*([a-zA-Z0-9._-]+.desktop):(#.*|\s*)$")
     for untrusted_line in untrusted_appmenulist:
         # Ignore blank lines and comments
-        if len(untrusted_line) == 0 or ignore_rx.match(untrusted_line):
+        if not untrusted_line or ignore_rx.match(untrusted_line):
             continue
         # use search instead of match to skip file path
         untrusted_m = line_rx.search(untrusted_line)
@@ -275,6 +284,12 @@ def create_template(path, name, values, legacy):
 
 
 def process_appmenus_templates(appmenusext, vm, appmenus):
+    '''Get parsed appmenus and write appmenus templates from them.
+
+    :param appmenusext: AppmenusExtension instance
+    :param vm: VM from which appmenus were extracted
+    :param appmenus: appmenus dictionary, indexed with entry basename
+    '''
     old_umask = os.umask(0o002)
 
     legacy_appmenus = vm.features.check_with_template(
@@ -323,7 +338,7 @@ def process_appmenus_templates(appmenusext, vm, appmenus):
                     old_icon = None
                 if old_icon is None or icon != old_icon:
                     icon.save(icondest)
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 vm.log.warning('Failed to get icon for {0}: {1!s}'.
                     format(appmenu_name, e))
 
@@ -355,22 +370,19 @@ def retrieve_appmenus_templates(vm, use_stdin=True):
 
     Returns: dict of desktop entries, each being dict itself.
     '''
-    if hasattr(vm, 'template'):
-        raise qubesadmin.exc.QubesException(
-            "To sync appmenus for template based VM, do it on template instead")
-
     if not vm.is_running():
         raise qubesadmin.exc.QubesVMNotRunningError(
             "Appmenus can be retrieved only from running VM")
 
     new_appmenus = get_appmenus(vm if not use_stdin else None)
 
-    if len(new_appmenus) == 0:
+    if not new_appmenus:
         raise qubesadmin.exc.QubesException("No appmenus received, terminating")
     return new_appmenus
 
 
 def main(args=None):
+    '''Main function of qvm-sync-appmenus tool'''
     env_vmname = os.environ.get("QREXEC_REMOTE_DOMAIN")
 
     args = parser.parse_args(args)
