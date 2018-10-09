@@ -1,7 +1,13 @@
 sudo: required
 dist: trusty
-language: generic
-install: git clone https://github.com/QubesOS/qubes-builder ~/qubes-builder
+language: python
+python:
+ - '3.5'
+install:
+ - pip install --quiet -r ci/requirements.txt
+ - git clone https://github.com/QubesOS/qubes-builder ~/qubes-builder
+ - git clone https://github.com/QubesOS/qubes-linux-utils ~/linux-utils
+ - git clone https://github.com/QubesOS/qubes-core-admin-client ~/core-admin-client
 script: ~/qubes-builder/scripts/travis-build
 env:
  - DIST_DOM0=fc25 USE_QUBES_REPO_VERSION=4.0 USE_QUBES_REPO_TESTING=1
@@ -13,6 +19,10 @@ env:
 
 jobs:
   include:
+    - env: PYTHONPATH=~/core-admin-client:~/linux-utils/imgconverter
+      script:
+       - python3 -m pylint qubesappmenus
+       - python3 -m unittest -v qubesappmenus
     - stage: deploy
       env: DIST_DOM0=fc25 TESTS_ONLY=
       script: ~/qubes-builder/scripts/travis-deploy
