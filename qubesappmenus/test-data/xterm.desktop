@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Terminal=false
+X-Qubes-VmName=test-inst-app
+Icon=%BASEDIR%/test-inst-app/apps.icons/xterm.png
+Name=test-inst-app: XTerm
+GenericName=test-inst-app: Terminal
+Comment=standard terminal emulator for the X window system
+Categories=System;TerminalEmulator;X-Qubes-VM;
+Exec=qvm-run -q -a --service -- test-inst-app qubes.StartApp+xterm
+X-Qubes-DispvmExec=qvm-run -q -a --service --dispvm=test-inst-app -- qubes.StartApp+xterm

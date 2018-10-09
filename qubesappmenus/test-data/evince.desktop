@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Terminal=false
+X-Qubes-VmName=test-inst-app
+Icon=%BASEDIR%/test-inst-app/apps.icons/evince.png
+Name=test-inst-app: Document Viewer
+Comment=View multi-page documents
+Categories=GNOME;GTK;Office;Viewer;Graphics;2DGraphics;VectorGraphics;X-Qubes-VM;
+Exec=qvm-run -q -a --service -- test-inst-app qubes.StartApp+evince
+X-Qubes-DispvmExec=qvm-run -q -a --service --dispvm=test-inst-app -- qubes.StartApp+evince

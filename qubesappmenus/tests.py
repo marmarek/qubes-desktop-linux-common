@@ -1,5 +1,6 @@
-#!/usr/bin/python2
+#!/usr/bin/python3
 # coding=utf-8
+# pylint: skip-file
 #
 # The Qubes OS Project, http://www.qubes-os.org
 #
@@ -22,10 +23,12 @@
 # USA.
 
 import colorsys
+import io
 import os
 import tempfile
 
 import unittest
+import unittest.mock
 import pkg_resources
 import qubesappmenus
 import qubesappmenus.receive
@@ -36,6 +39,7 @@ class Label(object):
         self.index = index
         self.color = color
         self.name = name
+        self.icon = name + '.png'
 
 class TestApp(object):
     labels = {1: Label(1, '0xcc0000', 'red')}
@@ -43,6 +47,20 @@ class TestApp(object):
     def __init__(self):
         self.domains = {}
 
+class TestFeatures(dict):
+
+    def __init__(self, vm, **kwargs) -> None:
+        self.vm = vm
+        super().__init__(**kwargs)
+
+    def check_with_template(self, feature, default=None):
+        if feature in self:
+            return self[feature]
+        if hasattr(self.vm, 'template'):
+            return self.vm.template.features.check_with_template(feature,
+                default)
+        else:
+            return default
 
 class TestVM(object):
     # pylint: disable=too-few-public-methods
@@ -52,6 +70,7 @@ class TestVM(object):
         self.running = False
         self.is_template = False
         self.name = name
+        self.features = TestFeatures(self)
         for k, v in kwargs.items():
             setattr(self, k, v)
 
@@ -85,7 +104,25 @@ class TC_00_Appmenus(unittest.TestCase):
         )
         self.app = TestApp()
         self.ext = qubesappmenus.Appmenus()
-        self.basedir = os.path.expanduser('~/.local/share/qubes-appmenus')
+        self.basedir_obj = tempfile.TemporaryDirectory()
+        self.basedir = self.basedir_obj.name
+        self.basedir_patch = unittest.mock.patch('qubesappmenus.basedir',
+            self.basedir)
+        self.basedir_patch.start()
+
+    def tearDown(self):
+        self.basedir_patch.stop()
+        self.basedir_obj.cleanup()
+        super(TC_00_Appmenus, self).tearDown()
+
+    def assertPathExists(self, path):
+        if not os.path.exists(path):
+            self.fail("Path {} does not exist".format(path))
+
+    def assertPathNotExists(self, path):
+        if os.path.exists(path):
+            self.fail("Path {} exists while it should not".format(path))
+
 
     def test_000_templates_dirs(self):
         self.assertEqual(
@@ -158,6 +195,95 @@ class TC_00_Appmenus(unittest.TestCase):
             os.path.join(self.basedir,
                 self.appvm.name, 'apps.icons')
         )
+
+    def test_005_created_appvm(self):
+        tpl = TestVM('test-inst-tpl',
+            klass='TemplateVM',
+            virt_mode='pvh',
+            updateable=True,
+            provides_network=False,
+            label=self.app.labels[1])
+        self.ext.appmenus_init(tpl)
+        appvm = TestVM('test-inst-app',
+            klass='AppVM',
+            template=tpl,
+            virt_mode='pvh',
+            updateable=False,
+            provides_network=False,
+            label=self.app.labels[1])
+        self.ext.appmenus_init(appvm)
+        with open(os.path.join(self.ext.templates_dirs(tpl)[0],
+                'evince.desktop'), 'wb') as f:
+            f.write(pkg_resources.resource_string(__name__,
+                'test-data/evince.desktop.template'))
+        self.ext.appmenus_create(appvm, refresh_cache=False)
+        self.ext.appicons_create(appvm)
+        evince_path = os.path.join(
+            self.ext.appmenus_dir(appvm), appvm.name + '-evince.desktop')
+        self.assertPathExists(evince_path)
+        with open(evince_path, 'rb') as f:
+            self.assertEqual(
+                pkg_resources.resource_string(__name__,
+                    'test-data/evince.desktop').replace(b'%BASEDIR%',
+                    qubesappmenus.basedir.encode()),
+                f.read()
+            )
+
+    def test_006_created_appvm_custom(self):
+        tpl = TestVM('test-inst-tpl',
+            klass='TemplateVM',
+            virt_mode='pvh',
+            updateable=True,
+            provides_network=False,
+            label=self.app.labels[1])
+        self.ext.appmenus_init(tpl)
+        appvm = TestVM('test-inst-app',
+            klass='AppVM',
+            template=tpl,
+            virt_mode='pvh',
+            updateable=False,
+            provides_network=False,
+            label=self.app.labels[1])
+        self.ext.appmenus_init(appvm)
+        with open(os.path.join(self.ext.templates_dirs(tpl)[0],
+                'evince.desktop'), 'wb') as f:
+            f.write(pkg_resources.resource_string(__name__,
+                'test-data/evince.desktop.template'))
+        self.ext.appmenus_create(appvm, refresh_cache=False)
+        self.ext.appicons_create(appvm)
+
+        with open(os.path.join(self.ext.templates_dirs(tpl)[0],
+                'xterm.desktop'), 'wb') as f:
+            f.write(pkg_resources.resource_string(__name__,
+                'test-data/xterm.desktop.template'))
+        with open(os.path.join(self.ext.templates_dirs(tpl)[0],
+                'evince.desktop'), 'wb') as f:
+            f.write(pkg_resources.resource_string(__name__,
+                'test-data/evince.desktop.template').
+                replace(b'Document Viewer', b'Random Viewer'))
+        self.ext.appmenus_update(appvm)
+        evince_path = os.path.join(
+            self.ext.appmenus_dir(appvm), appvm.name + '-evince.desktop')
+        self.assertPathExists(evince_path)
+        with open(evince_path, 'rb') as f:
+            self.assertEqual(
+                pkg_resources.resource_string(__name__,
+                    'test-data/evince.desktop')
+                    .replace(b'%BASEDIR%', qubesappmenus.basedir.encode())
+                    .replace(b'Document Viewer', b'Random Viewer'),
+                f.read()
+            )
+
+        xterm_path = os.path.join(
+            self.ext.appmenus_dir(appvm), appvm.name + '-xterm.desktop')
+        self.assertPathExists(xterm_path)
+        with open(xterm_path, 'rb') as f:
+            self.assertEqual(
+                pkg_resources.resource_string(__name__,
+                    'test-data/xterm.desktop')
+                    .replace(b'%BASEDIR%', qubesappmenus.basedir.encode()),
+                f.read()
+            )
 
     def test_100_get_appmenus(self):
         self.maxDiff = None
@@ -274,6 +400,100 @@ class TC_00_Appmenus(unittest.TestCase):
             with open(path) as f:
                 actual_template = f.read()
             self.assertEqual(actual_template, expected_template)
+
+    @unittest.mock.patch('subprocess.check_call')
+    def test_120_create_appvm(self, mock_subprocess):
+        tpl = TestVM('test-inst-tpl',
+            klass='TemplateVM',
+            virt_mode='pvh',
+            updateable=True,
+            provides_network=False,
+            label=self.app.labels[1])
+        self.ext.appmenus_init(tpl)
+        with open(os.path.join(self.ext.templates_dirs(tpl)[0],
+                'evince.desktop'), 'wb') as f:
+            f.write(pkg_resources.resource_string(__name__,
+                'test-data/evince.desktop.template'))
+        appvm = TestVM('test-inst-app',
+            klass='AppVM',
+            template=tpl,
+            virt_mode='pvh',
+            updateable=False,
+            provides_network=False,
+            label=self.app.labels[1])
+        self.ext.appmenus_init(appvm)
+        self.ext.appmenus_create(appvm, refresh_cache=False)
+        evince_path = os.path.join(
+            self.ext.appmenus_dir(appvm), 'test-inst-app-evince.desktop')
+        self.assertPathExists(evince_path)
+        with open(evince_path, 'rb') as f:
+            self.assertEqual(
+                pkg_resources.resource_string(__name__,
+                    'test-data/evince.desktop').replace(b'%BASEDIR%',
+                    qubesappmenus.basedir.encode()),
+                f.read()
+            )
+        mock_subprocess.assert_called_once_with([
+            'xdg-desktop-menu', 'install', '--noupdate',
+            self.basedir + '/test-inst-app/apps/test-inst-app-vm.directory',
+            self.basedir + '/test-inst-app/apps/test-inst-app-evince.desktop',
+            self.basedir + '/test-inst-app/apps/test-inst-app-qubes-vm'
+                           '-settings.desktop',
+        ], env=unittest.mock.ANY)
+
+    def test_130_process_appmenus_templates(self):
+        def _run(service, **kwargs):
+            class PopenMockup(object):
+                pass
+            self.assertEqual(service, 'qubes.GetImageRGBA')
+            p = PopenMockup()
+            p.stdin = unittest.mock.Mock()
+            p.stdout = io.BytesIO(b'1 1\nxxxx')
+            p.wait = lambda: None
+            p.returncode = 0
+            return p
+        self.appvm.virt_mode = 'pvh'
+        self.appvm.run_service = _run
+        self.appvm.log = unittest.mock.Mock()
+        appmenus = {
+            'org.gnome.Cheese': {
+                'Name': 'Cheese',
+                'GenericName': 'Webcam Booth',
+                'Comment': 'Take photos and videos with your webcam, with fun graphical effects',
+                'Categories': 'GNOME;AudioVideo;Video;Recorder;',
+                'Exec': 'qubes-desktop-run '
+                        '/usr/share/applications/org.gnome.Cheese.desktop',
+                'Icon': 'cheese',
+            },
+            'evince': {
+                'Name': 'Document Viewer',
+                'Comment': 'View multi-page documents',
+                'Categories': 'GNOME;GTK;Office;Viewer;Graphics;2DGraphics;VectorGraphics;',
+                'Exec': 'qubes-desktop-run '
+                        '/usr/share/applications/evince.desktop',
+                'Icon': 'evince',
+            },
+        }
+
+        # function under test
+        qubesappmenus.receive.process_appmenus_templates(self.ext,
+            self.appvm, appmenus)
+
+        evince_path = os.path.join(
+            self.ext.templates_dirs(self.appvm)[0],
+            'evince.desktop')
+        self.assertPathExists(evince_path)
+        with open(evince_path, 'rb') as f:
+            self.assertEqual(
+                pkg_resources.resource_string(__name__,
+                    'test-data/evince.desktop.template'),
+                f.read()
+            )
+        self.assertEqual(self.appvm.log.mock_calls, [
+            ('info', ('Creating org.gnome.Cheese',), {}),
+            ('info', ('Creating evince',), {}),
+        ])
+
 
 
 def list_tests():
