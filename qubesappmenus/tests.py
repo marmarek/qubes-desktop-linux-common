@@ -87,38 +87,42 @@ class TC_00_Appmenus(unittest.TestCase):
         self.ext = qubesappmenus.Appmenus()
         self.basedir = os.path.expanduser('~/.local/share/qubes-appmenus')
 
-    def test_000_templates_dir(self):
+    def test_000_templates_dirs(self):
         self.assertEqual(
-            self.ext.templates_dir(self.standalone),
-            os.path.join(self.basedir,
-                self.standalone.name, 'apps.templates')
+            self.ext.templates_dirs(self.standalone),
+            [os.path.join(self.basedir,
+                self.standalone.name, 'apps.templates')]
         )
         self.assertEqual(
-            self.ext.templates_dir(self.template),
-            os.path.join(self.basedir,
-                self.template.name, 'apps.templates')
+            self.ext.templates_dirs(self.template),
+            [os.path.join(self.basedir,
+                self.template.name, 'apps.templates')]
         )
         self.assertEqual(
-            self.ext.templates_dir(self.appvm),
-            os.path.join(self.basedir,
-                self.template.name, 'apps.templates')
+            self.ext.templates_dirs(self.appvm),
+            [os.path.join(self.basedir,
+                self.appvm.name, 'apps.templates'),
+             os.path.join(self.basedir,
+                self.template.name, 'apps.templates')]
         )
 
     def test_001_template_icons_dir(self):
         self.assertEqual(
-            self.ext.template_icons_dir(self.standalone),
-            os.path.join(self.basedir,
-                self.standalone.name, 'apps.tempicons')
+            self.ext.template_icons_dirs(self.standalone),
+            [os.path.join(self.basedir,
+                self.standalone.name, 'apps.tempicons')]
         )
         self.assertEqual(
-            self.ext.template_icons_dir(self.template),
-            os.path.join(self.basedir,
-                self.template.name, 'apps.tempicons')
+            self.ext.template_icons_dirs(self.template),
+            [os.path.join(self.basedir,
+                self.template.name, 'apps.tempicons')]
         )
         self.assertEqual(
-            self.ext.template_icons_dir(self.appvm),
-            os.path.join(self.basedir,
-                self.template.name, 'apps.tempicons')
+            self.ext.template_icons_dirs(self.appvm),
+            [os.path.join(self.basedir,
+                self.appvm.name, 'apps.tempicons'),
+             os.path.join(self.basedir,
+                self.template.name, 'apps.tempicons')]
         )
 
     def test_002_appmenus_dir(self):

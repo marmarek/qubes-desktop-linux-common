@@ -121,28 +121,36 @@ class TC_10_AppmenusIntegration(qubes.tests.extra.ExtraTestCase):
         tpl = self.app.add_new_vm(qubes.vm.templatevm.TemplateVM,
             name=self.make_vm_name('tpl'), label='red')
         self.loop.run_until_complete(tpl.create_on_disk())
-        self.assertPathExists(self.appmenus.templates_dir(tpl))
-        self.assertPathExists(self.appmenus.template_icons_dir(tpl))
+        self.assertEqual(len(self.appmenus.templates_dirs(tpl)), 1)
+        self.assertPathExists(self.appmenus.templates_dirs(tpl)[0])
+        self.assertEqual(len(self.appmenus.template_icons_dirs(tpl)), 1)
+        self.assertPathExists(self.appmenus.template_icons_dirs(tpl)[0])
 
     def test_004_created_template_from_other(self):
         tpl = self.app.add_new_vm(qubes.vm.templatevm.TemplateVM,
             name=self.make_vm_name('tpl'), label='red')
         self.loop.run_until_complete(tpl.clone_disk_files(
             self.app.default_template))
-        self.assertPathExists(self.appmenus.templates_dir(tpl))
-        self.assertPathExists(self.appmenus.template_icons_dir(tpl))
+        self.assertEqual(len(self.appmenus.templates_dirs(tpl)), 1)
+        self.assertPathExists(self.appmenus.templates_dirs(tpl)[0])
+        self.assertEqual(len(self.appmenus.template_icons_dirs(tpl)), 1)
+        self.assertPathExists(self.appmenus.template_icons_dirs(tpl)[0])
         self.assertPathExists(os.path.join(qubesappmenus.basedir, tpl.name,
             qubesappmenus.AppmenusSubdirs.whitelist))
 
-        for appmenu in os.listdir(self.appmenus.templates_dir(
-                self.app.default_template)):
+        for appmenu in (os.path.join(d, f)
+                for d in self.appmenus.templates_dirs(
+                    self.app.default_template)
+                for f in os.listdir(d)):
             self.assertPathExists(os.path.join(
-                self.appmenus.templates_dir(tpl), appmenu))
+                self.appmenus.templates_dirs(tpl)[0], appmenu))
 
-        for appicon in os.listdir(self.appmenus.template_icons_dir(
-                self.app.default_template)):
+        for appicon in (os.path.join(d, f)
+                for d in self.appmenus.template_icons_dirs(
+                    self.app.default_template)
+                for f in os.listdir(d)):
             self.assertPathExists(os.path.join(
-                self.appmenus.template_icons_dir(tpl), appicon))
+                self.appmenus.template_icons_dirs(tpl)[0], appicon))
 
     def get_image_color(self, path, expected_color):
         """Return mean color of the image as (r, g, b) in float"""

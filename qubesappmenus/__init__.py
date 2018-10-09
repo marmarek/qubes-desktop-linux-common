@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python3
 #
 # The Qubes OS Project, http://www.qubes-os.org
 #
@@ -27,6 +27,8 @@ import os.path
 import shutil
 import dbus
 import logging
+
+import itertools
 import pkg_resources
 import xdg.BaseDirectory
 
@@ -64,28 +66,35 @@ class AppmenusPaths:
 
 
 class Appmenus(object):
-    def templates_dir(self, vm):
+    def templates_dirs(self, vm):
         """
 
         :type vm: qubes.vm.qubesvm.QubesVM
         """
-        if vm.updateable:
-            return os.path.join(basedir, vm.name,
-                AppmenusSubdirs.templates_subdir)
-        elif hasattr(vm, 'template'):
-            return self.templates_dir(vm.template)
-        else:
-            return None
+        dirs = []
+        my_dir = os.path.join(basedir, vm.name,
+            AppmenusSubdirs.templates_subdir)
+        dirs.append(my_dir)
+        if hasattr(vm, 'template'):
+            dirs.extend(self.templates_dirs(vm.template))
+        return dirs
 
-    def template_icons_dir(self, vm):
+    def template_icons_dirs(self, vm):
         '''Directory for not yet colore icons'''
-        if vm.updateable:
-            return os.path.join(basedir, vm.name,
-                AppmenusSubdirs.template_icons_subdir)
-        elif hasattr(vm, 'template'):
-            return self.template_icons_dir(vm.template)
-        else:
-            return None
+        dirs = []
+        my_dir = os.path.join(basedir, vm.name,
+            AppmenusSubdirs.template_icons_subdir)
+        dirs.append(my_dir)
+        if hasattr(vm, 'template'):
+            dirs.extend(self.template_icons_dirs(vm.template))
+        return dirs
+
+    def template_for_file(self, template_dirs, name):
+        '''Find first template named *name* in *template_dirs*'''
+        for d in template_dirs:
+            path = os.path.join(d, name)
+            if os.path.exists(path):
+                return path
 
     def appmenus_dir(self, vm):
         '''Desktop files generated for particular VM'''
@@ -136,20 +145,33 @@ class Appmenus(object):
             replace("%VMDIR%", os.path.join(basedir, vm.name)).\
             replace("%XDGICON%", icon)
         if os.path.exists(destination_path):
-            current_dest = open(destination_path).read()
-            if current_dest == data:
-                return False
+            with open(destination_path) as dest_f:
+                current_dest = dest_f.read()
+                if current_dest == data:
+                    return False
         with open(destination_path, "w") as f:
             f.write(data)
         return True
 
+    def get_available_filenames(self, vm):
+        '''Yield filenames of available .desktop files'''
+        templates_dirs = self.templates_dirs(vm)
+        templates_dirs = (x for x in templates_dirs if os.path.isdir(x))
+        if not templates_dirs:
+            return
+
+        listed = set()
+        for template_dir in templates_dirs:
+            for filename in os.listdir(template_dir):
+                if filename in listed:
+                    continue
+                listed.add(filename)
+                yield os.path.join(template_dir, filename)
+
     def get_available(self, vm):
         # TODO icon path (#2885)
-        templates_dir = self.templates_dir(vm)
-        if templates_dir is None or not os.path.isdir(templates_dir):
-            return
-        for filename in os.listdir(templates_dir):
-            with open(os.path.join(templates_dir, filename)) as file:
+        for filename in self.get_available_filenames(vm):
+            with open(filename) as file:
                 name = None
                 for line in file:
                     if line.startswith('Name=%VMNAME%: '):
@@ -157,7 +179,7 @@ class Appmenus(object):
                         break
             assert name is not None, \
                 'template {!r} does not contain name'.format(filename)
-            yield (filename, name)
+            yield (os.path.basename(filename), name)
 
     def appmenus_create(self, vm, force=False, refresh_cache=True):
         """Create/update .desktop files
@@ -174,7 +196,8 @@ class Appmenus(object):
         if vm.klass == 'DispVM':
             return
 
-        vm.log.info("Creating appmenus")
+        if hasattr(vm, 'log'):
+            vm.log.info("Creating appmenus")
         appmenus_dir = self.appmenus_dir(vm)
         if not os.path.exists(appmenus_dir):
             os.makedirs(appmenus_dir)
@@ -191,23 +214,20 @@ class Appmenus(object):
                 dispvm):
             anything_changed = True
             directory_changed = True
-        templates_dir = self.templates_dir(vm)
-        if os.path.exists(templates_dir):
-            appmenus = os.listdir(templates_dir)
-        else:
-            appmenus = []
+        appmenus = list(self.get_available_filenames(vm))
         changed_appmenus = []
         if os.path.exists(self.whitelist_path(vm)):
             whitelist = [x.rstrip() for x in open(self.whitelist_path(vm))]
-            appmenus = [x for x in appmenus if x in whitelist]
+            appmenus = [x for x in appmenus if os.path.basename(x) in whitelist]
 
         for appmenu in appmenus:
+            appmenu_basename = os.path.basename(appmenu)
             if self.write_desktop_file(vm,
-                    os.path.join(templates_dir, appmenu),
+                    appmenu,
                     os.path.join(appmenus_dir,
-                        '-'.join((vm.name, appmenu))),
+                        '-'.join((vm.name, appmenu_basename))),
                     dispvm):
-                changed_appmenus.append(appmenu)
+                changed_appmenus.append(appmenu_basename)
         if self.write_desktop_file(vm,
                 pkg_resources.resource_string(
                     __name__, 'qubes-vm-settings.desktop.template'
@@ -219,7 +239,7 @@ class Appmenus(object):
         if changed_appmenus:
             anything_changed = True
 
-        target_appmenus = ['-'.join((vm.name, x))
+        target_appmenus = ['-'.join((vm.name, os.path.basename(x)))
             for x in appmenus + ['qubes-vm-settings.desktop']]
 
         # remove old entries
@@ -322,13 +342,11 @@ class Appmenus(object):
                 subprocess.call(['kbuildsycoca' +
                                  os.environ.get('KDE_SESSION_VERSION', '4')])
 
-    def appicons_create(self, vm, srcdir=None, force=False):
+    def appicons_create(self, vm, srcdirs=(), force=False):
         """Create/update applications icons"""
-        if srcdir is None:
-            srcdir = self.template_icons_dir(vm)
-        if srcdir is None:
-            return
-        if not os.path.exists(srcdir):
+        if not srcdirs:
+            srcdirs = self.template_icons_dirs(vm)
+        if not srcdirs:
             return
 
         if vm.features.get('internal', False):
@@ -353,13 +371,16 @@ class Appmenus(object):
             expected_icons = [os.path.splitext(x)[0] + '.png'
                 for x in whitelist]
         else:
-            expected_icons = os.listdir(srcdir)
+            expected_icons = list(itertools.chain.from_iterable(
+                os.listdir(srcdir)
+                for srcdir in srcdirs
+                if os.path.exists(srcdir)))
 
-        for icon in os.listdir(srcdir):
-            if icon not in expected_icons:
+        for icon in expected_icons:
+            src_icon = self.template_for_file(srcdirs, icon)
+            if not src_icon:
                 continue
 
-            src_icon = os.path.join(srcdir, icon)
             dst_icon = os.path.join(dstdir, icon)
             if not os.path.exists(dst_icon) or force or \
                     os.path.getmtime(src_icon) > os.path.getmtime(dst_icon):
@@ -391,15 +412,20 @@ class Appmenus(object):
                 src = vm.template
             except AttributeError:
                 pass
-        if vm.updateable and src is None:
-            os.makedirs(self.templates_dir(vm))
-            os.makedirs(self.template_icons_dir(vm))
+        own_templates_dir = os.path.join(basedir, vm.name,
+                AppmenusSubdirs.templates_subdir)
+        own_template_icons_dir = os.path.join(basedir, vm.name,
+                AppmenusSubdirs.template_icons_subdir)
+        if src is None:
+            os.makedirs(own_templates_dir)
+            os.makedirs(os.path.join(basedir, vm.name,
+                AppmenusSubdirs.template_icons_subdir))
 
         if vm.virt_mode == 'hvm' and src is None:
             vm.log.info("Creating appmenus directory: {0}".format(
-                self.templates_dir(vm)))
+                own_templates_dir))
             shutil.copy(AppmenusPaths.appmenu_start_hvm_template,
-                        self.templates_dir(vm))
+                        own_templates_dir)
 
         source_whitelist_filename = 'vm-' + AppmenusSubdirs.whitelist
         if src and os.path.exists(
@@ -423,12 +449,14 @@ class Appmenus(object):
                         os.path.join(basedir, vm.name, whitelist))
 
             vm.log.info("Creating/copying appmenus templates")
-            if os.path.isdir(self.templates_dir(src)):
-                shutil.copytree(self.templates_dir(src),
-                                self.templates_dir(vm))
-            if os.path.isdir(self.template_icons_dir(src)):
-                shutil.copytree(self.template_icons_dir(src),
-                                self.template_icons_dir(vm))
+            src_dir = self.templates_dirs(src)[0]
+            if os.path.isdir(src_dir):
+                shutil.copytree(src_dir,
+                                own_templates_dir)
+            src_dir = self.template_icons_dirs(src)[0]
+            if os.path.isdir(src_dir):
+                shutil.copytree(src_dir,
+                                own_template_icons_dir)
 
     def set_default_whitelist(self, vm, applications_list):
         '''Update default applications list for VMs created on this template

@@ -280,24 +280,26 @@ def process_appmenus_templates(appmenusext, vm, appmenus):
     legacy_appmenus = vm.features.check_with_template(
         'appmenus-legacy', False)
 
-    if not os.path.exists(appmenusext.templates_dir(vm)):
-        os.makedirs(appmenusext.templates_dir(vm))
+    templates_dir = appmenusext.templates_dirs(vm)[0]
+    if not os.path.exists(templates_dir):
+        os.makedirs(templates_dir)
 
-    if not os.path.exists(appmenusext.template_icons_dir(vm)):
-        os.makedirs(appmenusext.template_icons_dir(vm))
+    template_icons_dir = appmenusext.template_icons_dirs(vm)[0]
+    if not os.path.exists(template_icons_dir):
+        os.makedirs(template_icons_dir)
 
     if vm.virt_mode == 'hvm':
         if not os.path.exists(os.path.join(
-                appmenusext.templates_dir(vm),
+                templates_dir,
                 os.path.basename(
                     qubesappmenus.AppmenusPaths.appmenu_start_hvm_template))):
             shutil.copy(qubesappmenus.AppmenusPaths.appmenu_start_hvm_template,
-                appmenusext.templates_dir(vm))
+                templates_dir)
 
 
     for appmenu_name in appmenus.keys():
         appmenu_path = os.path.join(
-            appmenusext.templates_dir(vm),
+            templates_dir,
             appmenu_name) + '.desktop'
         if os.path.exists(appmenu_path):
             vm.log.info("Updating {0}".format(appmenu_name))
@@ -309,7 +311,7 @@ def process_appmenus_templates(appmenusext, vm, appmenus):
         # TODO     new_appmenus[appmenu_name].pop('Icon', None)
         if 'Icon' in appmenus[appmenu_name]:
             # the following line is used for time comparison
-            icondest = os.path.join(appmenusext.template_icons_dir(vm),
+            icondest = os.path.join(template_icons_dir,
                                     appmenu_name + '.png')
 
             try:
@@ -334,13 +336,13 @@ def process_appmenus_templates(appmenusext, vm, appmenus):
             appmenus[appmenu_name], legacy_appmenus)
 
     # Delete appmenus of removed applications
-    for appmenu_file in os.listdir(appmenusext.templates_dir(vm)):
+    for appmenu_file in os.listdir(templates_dir):
         if not appmenu_file.endswith('.desktop'):
             continue
 
         if appmenu_file[:-len('.desktop')] not in appmenus:
             vm.log.info("Removing {0}".format(appmenu_file))
-            os.unlink(os.path.join(appmenusext.templates_dir(vm),
+            os.unlink(os.path.join(templates_dir,
                 appmenu_file))
 
     os.umask(old_umask)
