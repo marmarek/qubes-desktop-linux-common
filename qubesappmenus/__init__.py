@@ -207,7 +207,7 @@ class Appmenus(object):
 
         if vm.features.get('internal', False):
             return
-        if vm.klass == 'DispVM':
+        if vm.klass == 'DispVM' and vm.auto_cleanup:
             return
 
         if hasattr(vm, 'log'):
@@ -365,7 +365,7 @@ class Appmenus(object):
 
         if vm.features.get('internal', False):
             return
-        if vm.klass == 'DispVM':
+        if vm.klass == 'DispVM' and vm.auto_cleanup:
             return
 
         whitelist = self.whitelist_path(vm)
