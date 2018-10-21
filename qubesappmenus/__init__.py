@@ -421,6 +421,7 @@ class Appmenus(object):
         :param src: source VM to copy data from
         '''
         os.makedirs(os.path.join(basedir, vm.name), exist_ok=True)
+        clone_from_src = src is not None
         if src is None:
             try:
                 src = vm.template
@@ -451,7 +452,7 @@ class Appmenus(object):
                 os.path.join(basedir, src.name, source_whitelist_filename),
                 os.path.join(basedir, vm.name, AppmenusSubdirs.whitelist))
 
-        if src and vm.updateable:
+        if clone_from_src:
             for whitelist in (
                     AppmenusSubdirs.whitelist,
                         'vm-' + AppmenusSubdirs.whitelist,
