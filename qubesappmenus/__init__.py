@@ -432,9 +432,9 @@ class Appmenus(object):
         own_template_icons_dir = os.path.join(basedir, vm.name,
                 AppmenusSubdirs.template_icons_subdir)
         if src is None:
-            os.makedirs(own_templates_dir)
+            os.makedirs(own_templates_dir, exist_ok=True)
             os.makedirs(os.path.join(basedir, vm.name,
-                AppmenusSubdirs.template_icons_subdir))
+                AppmenusSubdirs.template_icons_subdir), exist_ok=True)
 
         if vm.virt_mode == 'hvm' and src is None:
             vm.log.info("Creating appmenus directory: {0}".format(
@@ -466,12 +466,16 @@ class Appmenus(object):
             vm.log.info("Creating/copying appmenus templates")
             src_dir = self.templates_dirs(src)[0]
             if os.path.isdir(src_dir):
-                shutil.copytree(src_dir,
-                                own_templates_dir)
+                os.makedirs(own_templates_dir, exist_ok=True)
+                for f in os.listdir(src_dir):
+                    shutil.copy(os.path.join(src_dir, f),
+                        own_templates_dir)
             src_dir = self.template_icons_dirs(src)[0]
             if os.path.isdir(src_dir):
-                shutil.copytree(src_dir,
-                                own_template_icons_dir)
+                os.makedirs(own_template_icons_dir, exist_ok=True)
+                for f in os.listdir(src_dir):
+                    shutil.copy(os.path.join(src_dir, f),
+                        own_template_icons_dir)
 
     @staticmethod
     def set_default_whitelist(vm, applications_list):
