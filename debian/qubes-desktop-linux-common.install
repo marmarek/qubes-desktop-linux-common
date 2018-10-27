@@ -2,7 +2,6 @@ usr/bin/qvm-appmenus
 usr/bin/qvm-xkill
 usr/bin/qvm-sync-appmenus
 usr/share/qubes/icons/*.png
-usr/share/qubes-appmenus/qubes-start.desktop
 usr/share/qubes-appmenus/hvm/internet-explorer.desktop
 usr/share/qubes-appmenus/hvm/cmd.desktop
 usr/share/qubes-appmenus/hvm/explorer.desktop
