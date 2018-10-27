@@ -435,6 +435,8 @@ class TC_00_Appmenus(unittest.TestCase):
             'xdg-desktop-menu', 'install', '--noupdate',
             self.basedir + '/test-inst-app/apps/test-inst-app-vm.directory',
             self.basedir + '/test-inst-app/apps/test-inst-app-evince.desktop',
+            self.basedir + '/test-inst-app/apps/test-inst-app-qubes-start'
+                           '.desktop',
             self.basedir + '/test-inst-app/apps/test-inst-app-qubes-vm'
                            '-settings.desktop',
         ], env=unittest.mock.ANY)
