@@ -231,7 +231,8 @@ class Appmenus(object):
         appmenus = list(self.get_available_filenames(vm))
         changed_appmenus = []
         if os.path.exists(self.whitelist_path(vm)):
-            whitelist = [x.rstrip() for x in open(self.whitelist_path(vm))]
+            with open(self.whitelist_path(vm)) as whitelist_f:
+                whitelist = [x.rstrip() for x in whitelist_f]
             appmenus = [x for x in appmenus if os.path.basename(x) in whitelist]
 
         for appmenu in appmenus:
@@ -370,7 +371,8 @@ class Appmenus(object):
 
         whitelist = self.whitelist_path(vm)
         if os.path.exists(whitelist):
-            whitelist = [line.strip() for line in open(whitelist)]
+            with open(whitelist) as whitelist_f:
+                whitelist = [line.strip() for line in whitelist_f]
         else:
             whitelist = None
 
