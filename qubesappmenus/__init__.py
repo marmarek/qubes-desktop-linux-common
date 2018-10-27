@@ -439,8 +439,11 @@ class Appmenus(object):
         if src is None:
             vm.log.info("Creating appmenus directory: {0}".format(
                 own_templates_dir))
-            shutil.copy(AppmenusPaths.appmenu_start_hvm_template,
-                        own_templates_dir)
+            with open(
+                    os.path.join(own_templates_dir, 'qubes-start.desktop'),
+                    'wb') as qubes_start_f:
+                qubes_start_f.write(pkg_resources.resource_string(__name__,
+                    'qubes-start.desktop.template'))
 
         source_whitelist_filename = 'vm-' + AppmenusSubdirs.whitelist
         if src and os.path.exists(

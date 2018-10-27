@@ -109,6 +109,7 @@ fi
 %{python3_sitelib}/qubesappmenus/qubes-templatevm.directory.template
 %{python3_sitelib}/qubesappmenus/qubes-vm.directory.template
 %{python3_sitelib}/qubesappmenus/qubes-dispvm.directory.template
+%{python3_sitelib}/qubesappmenus/qubes-start.desktop.template
 %{python3_sitelib}/qubesappmenus/tests.py
 %{python3_sitelib}/qubesappmenus/tests_integ.py
 %{python3_sitelib}/qubesappmenus/test-data
@@ -119,7 +120,6 @@ fi
 %{python3_sitelib}/qubesappmenusext/__init__.py
 
 /etc/qubes-rpc/qubes.SyncAppMenus
-/usr/share/qubes-appmenus/qubes-start.desktop
 /usr/share/qubes-appmenus/hvm
 /usr/share/qubes/icons/*.png
 /usr/bin/qvm-sync-appmenus
