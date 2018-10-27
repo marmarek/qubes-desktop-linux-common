@@ -441,6 +441,49 @@ class TC_00_Appmenus(unittest.TestCase):
                            '-settings.desktop',
         ], env=unittest.mock.ANY)
 
+    @unittest.mock.patch('subprocess.check_call')
+    def test_121_create_appvm_with_whitelist(self, mock_subprocess):
+        tpl = TestVM('test-inst-tpl',
+            klass='TemplateVM',
+            virt_mode='pvh',
+            updateable=True,
+            provides_network=False,
+            label=self.app.labels[1])
+        self.ext.appmenus_init(tpl)
+        with open(os.path.join(self.ext.templates_dirs(tpl)[0],
+                'evince.desktop'), 'wb') as f:
+            f.write(pkg_resources.resource_string(__name__,
+                'test-data/evince.desktop.template'))
+        with open(os.path.join(self.basedir, tpl.name,
+                'vm-whitelisted-appmenus.list'), 'wb') as f:
+            f.write(b'evince.desktop\n')
+        appvm = TestVM('test-inst-app',
+            klass='AppVM',
+            template=tpl,
+            virt_mode='pvh',
+            updateable=False,
+            provides_network=False,
+            label=self.app.labels[1])
+        self.ext.appmenus_init(appvm)
+        self.ext.appmenus_create(appvm, refresh_cache=False)
+        evince_path = os.path.join(
+            self.ext.appmenus_dir(appvm), 'test-inst-app-evince.desktop')
+        self.assertPathExists(evince_path)
+        with open(evince_path, 'rb') as f:
+            self.assertEqual(
+                pkg_resources.resource_string(__name__,
+                    'test-data/evince.desktop').replace(b'%BASEDIR%',
+                    qubesappmenus.basedir.encode()),
+                f.read()
+            )
+        mock_subprocess.assert_called_once_with([
+            'xdg-desktop-menu', 'install', '--noupdate',
+            self.basedir + '/test-inst-app/apps/test-inst-app-vm.directory',
+            self.basedir + '/test-inst-app/apps/test-inst-app-evince.desktop',
+            self.basedir + '/test-inst-app/apps/test-inst-app-qubes-vm'
+                           '-settings.desktop',
+        ], env=unittest.mock.ANY)
+
     def test_130_process_appmenus_templates(self):
         def _run(service, **kwargs):
             class PopenMockup(object):
