@@ -28,6 +28,8 @@ import tempfile
 
 import unittest
 import unittest.mock
+
+import logging
 import pkg_resources
 import qubesappmenus
 import qubesappmenus.receive
@@ -68,6 +70,7 @@ class TestVM(object):
         self.running = False
         self.is_template = False
         self.name = name
+        self.log = logging.getLogger('qubesappmenus.tests')
         self.features = TestFeatures(self)
         for k, v in kwargs.items():
             setattr(self, k, v)
