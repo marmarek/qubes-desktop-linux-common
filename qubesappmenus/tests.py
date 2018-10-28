@@ -535,7 +535,7 @@ class TC_00_Appmenus(unittest.TestCase):
                     'test-data/evince.desktop.template'),
                 f.read()
             )
-        self.assertEqual(self.appvm.log.mock_calls, [
+        self.assertCountEqual(self.appvm.log.mock_calls, [
             ('info', ('Creating org.gnome.Cheese',), {}),
             ('info', ('Creating evince',), {}),
         ])
