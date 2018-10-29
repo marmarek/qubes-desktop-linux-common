@@ -1,3 +1,24 @@
+qubes-desktop-linux-common (4.0.16-1) unstable; urgency=medium
+
+  * appmenus: support per-vm appmenus templates
+  * tests: include unit tests for multiple appmenus templates
+    directories
+  * appmenus: add pylint configuration, fix found issues
+  * travis: add pylint and tests run
+  * appmenus: exclude only auto-cleanup DispVM
+  * appmenus: fix qvm-appmenus --source for non-templates
+  * appmenus: do not fail qvm-appmenus --init on already existing dirs
+  * appmenus: create "Start" entry for any non-template based VM
+  * appmenus: use pkg_resources to distribute qubes-start.desktop file
+  * tests/appmenus: adjust for qubes-start.desktop installed always
+  * appmenus/tests: appmenus whitelist
+  * appmenus: fix open file leak
+  * appmenus/tests: fix TestVM mockup
+  * travis: fix calling tests
+  * appmenus/test: ignore menu creation order
+
+ -- Marek Marczykowski-Górecki <marmarek@invisiblethingslab.com>  Mon, 29 Oct 2018 05:43:14 +0100
+
 qubes-desktop-linux-common (4.0.15-1) unstable; urgency=medium
 
   * tests: fix color compare
