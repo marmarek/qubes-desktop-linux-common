@@ -376,8 +376,6 @@ def retrieve_appmenus_templates(vm, use_stdin=True):
 
     new_appmenus = get_appmenus(vm if not use_stdin else None)
 
-    if not new_appmenus:
-        raise qubesadmin.exc.QubesException("No appmenus received, terminating")
     return new_appmenus
 
 
@@ -402,5 +400,8 @@ def main(args=None):
     appmenusext = qubesappmenus.Appmenus()
     if not args.regenerate_only:
         new_appmenus = retrieve_appmenus_templates(vm, use_stdin=use_stdin)
-        process_appmenus_templates(appmenusext, vm, new_appmenus)
+        if not new_appmenus:
+            vm.log.info("No appmenus received, terminating")
+        else:
+            process_appmenus_templates(appmenusext, vm, new_appmenus)
     appmenusext.appmenus_update(vm)
