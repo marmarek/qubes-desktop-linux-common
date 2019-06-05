@@ -179,21 +179,32 @@ class Appmenus(object):
                 listed.add(filename)
                 yield os.path.join(template_dir, filename)
 
-    def get_available(self, vm):
+    def get_available(self, vm, fields=None):
         '''Get available menu entries for given VM
 
-        Returns a generator of (filename, display_name) tuples'''
+        Returns a generator of lists that contain fields to be outputted'''
         # TODO icon path (#2885)
         for filename in self.get_available_filenames(vm):
+            field_values = {}
             with open(filename) as file:
                 name = None
                 for line in file:
                     if line.startswith('Name=%VMNAME%: '):
                         name = line.partition('Name=%VMNAME%: ')[2].strip()
-                        break
+                        if not fields:
+                            break
+                    if fields:
+                        [field_name, value] = \
+                            [x.strip() for x in line.split('=', 1)]
+                        if field_name in fields:
+                            field_values[field_name] = value
             assert name is not None, \
                 'template {!r} does not contain name'.format(filename)
-            yield (os.path.basename(filename), name)
+            result = [os.path.basename(filename), name]
+            if fields:
+                for field in fields:
+                    result.append(field_values.get(field, ''))
+            yield result
 
     def appmenus_create(self, vm, force=False, refresh_cache=True):
         """Create/update .desktop files
@@ -575,6 +586,10 @@ parser.add_argument('--i-understand-format-is-unstable', dest='fool',
     help='required pledge for --get-available')
 parser.add_argument('domains', metavar='VMNAME', nargs='+',
     help='VMs on which perform requested actions')
+parser.add_argument('--file-field', action='append', dest='fields',
+    help='File field to append to output for --get-available; can be used'
+         ' multiple times for multiple fields. This option changes output'
+         ' format to pipe-("|") separated.')
 
 
 def retrieve_list(path):
@@ -631,8 +646,15 @@ def main(args=None, app=None):
                     parser.error(
                         'this requires --i-understand-format-is-unstable '
                         'and a sacrifice of one cute kitten')
-                sys.stdout.write(''.join('{} - {}\n'.format(*available)
-                    for available in appmenus.get_available(vm)))
+                if not args.fields:
+                    sys.stdout.write(''.join('{} - {}\n'.format(*available)
+                                             for available in
+                                             appmenus.get_available(vm)))
+                else:
+                    for result in appmenus.get_available(
+                            vm, fields=args.fields):
+                        print('|'.join(result))
+
 
 if __name__ == '__main__':
     sys.exit(main())
