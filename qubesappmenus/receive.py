@@ -387,11 +387,10 @@ def main(args=None):
 
     if env_vmname:
         vm = args.app.domains[env_vmname]
+    elif not args.domains:
+        parser.error("You must specify at least the VM name!")
     else:
         vm = args.domains[0]
-
-    if vm is None:
-        parser.error("You must specify at least the VM name!")
 
     if env_vmname is None or args.force_rpc:
         use_stdin = False
