@@ -1,3 +1,17 @@
+qubes-desktop-linux-common (4.0.18-1) unstable; urgency=medium
+
+  [ Frédéric Pierret (fepitre) ]
+  * spec.in: use %{python3_pkgversion}
+
+  [ Marek Marczykowski-Górecki ]
+  * travis: update distributions
+
+  [ Anastasia Cotorobai ]
+  * Fix error index out of range if no args.domain
+  * Fix apps sync for AppVms -> sync anyway
+
+ -- Marek Marczykowski-Górecki <marmarek@invisiblethingslab.com>  Mon, 24 Jun 2019 21:51:13 +0200
+
 qubes-desktop-linux-common (4.0.17-1) unstable; urgency=medium
 
   * appmenus: do not treat no entries as an error
