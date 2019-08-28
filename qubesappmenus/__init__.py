@@ -188,7 +188,15 @@ class Appmenus(object):
             field_values = {}
             with open(filename) as file:
                 name = None
+                main_section = False
                 for line in file:
+                    if line.startswith('['):
+                        main_section = line == '[Desktop Entry]\n'
+                        continue
+                    if not main_section:
+                        continue
+                    if '=' not in line:
+                        continue
                     if line.startswith('Name=%VMNAME%: '):
                         name = line.partition('Name=%VMNAME%: ')[2].strip()
                         if not fields:
