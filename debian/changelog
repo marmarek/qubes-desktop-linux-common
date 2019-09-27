@@ -1,3 +1,17 @@
+qubes-desktop-linux-common (4.0.19-1) unstable; urgency=medium
+
+  [ Marta Marczykowska-Górecka ]
+  * Added handling for more file fields in GetAppmenus
+  * Added man page to qvm-appmenus
+
+  [ Marek Marczykowski-Górecki ]
+  * appmenus: fix handling sections in .desktop files
+
+  [ Saswat Padhi ]
+  * Update commands for pausing VMs
+
+ -- Marek Marczykowski-Górecki <marmarek@invisiblethingslab.com>  Fri, 27 Sep 2019 23:11:10 +0200
+
 qubes-desktop-linux-common (4.0.18-1) unstable; urgency=medium
 
   [ Frédéric Pierret (fepitre) ]
