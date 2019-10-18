@@ -548,6 +548,8 @@ class Appmenus(object):
         self.appmenus_create(vm, force=force, refresh_cache=False)
         if hasattr(vm, 'appvms'):
             for child_vm in vm.appvms:
+                if getattr(child_vm, 'guivm') != vm.app.local_name:
+                    continue
                 try:
                     self.appicons_create(child_vm, force=force)
                     self.appmenus_create(child_vm, refresh_cache=False)
