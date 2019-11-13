@@ -1,3 +1,16 @@
+qubes-desktop-linux-common (4.1.0-1) unstable; urgency=medium
+
+  [ Frédéric Pierret (fepitre) ]
+  * travis: switch to bionic
+  * appmenus syncing: ignore child_vm where local domain is not the
+    guivm
+  * Make PEP8 happier
+
+  [ Marek Marczykowski-Górecki ]
+  * travis: switch to R4.1
+
+ -- Marek Marczykowski-Górecki <marmarek@invisiblethingslab.com>  Wed, 13 Nov 2019 12:59:32 +0100
+
 qubes-desktop-linux-common (4.0.19-1) unstable; urgency=medium
 
   [ Marta Marczykowska-Górecka ]
