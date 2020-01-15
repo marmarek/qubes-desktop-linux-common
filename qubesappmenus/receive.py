@@ -23,12 +23,11 @@
 
 '''Retrieve menu entries from a VM and convert to appmenu templates'''
 
-import subprocess
 import re
 import os
 import sys
-import shutil
 import pipes
+import pkg_resources
 
 import qubesadmin.exc
 import qubesadmin.tools
@@ -121,14 +120,6 @@ def sanitise_categories(untrusted_value):
     return ';'.join(categories) + ';'
 
 
-def fallback_hvm_appmenulist():
-    '''List default menu entries to be created for HVM'''
-    p = subprocess.Popen(["grep", "-rH", "=", "/usr/share/qubes-appmenus/hvm"],
-                         stdout=subprocess.PIPE)
-    (stdout, _) = p.communicate()
-    return stdout.decode().splitlines()
-
-
 def get_appmenus(vm):
     '''Get appmenus from a *vm*. *vm* can be :py:obj:None to retrieve data
     from stdin - should be a `qubes.GetAppmenus` service in the VM connected
@@ -160,11 +151,8 @@ def get_appmenus(vm):
         p.wait()
         p.stdout.close()
         if p.returncode != 0:
-            if vm.virt_mode == 'hvm':
-                untrusted_appmenulist = fallback_hvm_appmenulist()
-            else:
-                raise qubesadmin.exc.QubesException(
-                    "Error getting application list")
+            raise qubesadmin.exc.QubesException(
+                "Error getting application list")
         if appmenus_line_limit_left == 0:
             raise qubesadmin.exc.QubesException("Line count limit exceeded")
 
@@ -303,14 +291,18 @@ def process_appmenus_templates(appmenusext, vm, appmenus):
     if not os.path.exists(template_icons_dir):
         os.makedirs(template_icons_dir)
 
-    if vm.virt_mode == 'hvm':
-        if not os.path.exists(os.path.join(
-                templates_dir,
-                os.path.basename(
-                    qubesappmenus.AppmenusPaths.appmenu_start_hvm_template))):
-            shutil.copy(qubesappmenus.AppmenusPaths.appmenu_start_hvm_template,
-                templates_dir)
+    # Only create Start shortcut for standalone VMs. Otherwise we will use the
+    # one from template VM.
+    has_qubes_start = vm.klass != 'AppVM'
 
+    if has_qubes_start:
+        qubes_start_fname = os.path.join(templates_dir, 'qubes-start.desktop')
+        if not os.path.exists(qubes_start_fname):
+            with open(qubes_start_fname, 'wb') as qubes_start_f:
+                vm.log.info("Creating Start")
+                qubes_start_f.write(pkg_resources.resource_string(
+                    __name__,
+                    'qubes-start.desktop.template'))
 
     for appmenu_name in appmenus.keys():
         appmenu_path = os.path.join(
@@ -353,6 +345,10 @@ def process_appmenus_templates(appmenusext, vm, appmenus):
     # Delete appmenus of removed applications
     for appmenu_file in os.listdir(templates_dir):
         if not appmenu_file.endswith('.desktop'):
+            continue
+
+        # Keep the Start shortcut
+        if has_qubes_start and appmenu_file == 'qubes-start.desktop':
             continue
 
         if appmenu_file[:-len('.desktop')] not in appmenus:

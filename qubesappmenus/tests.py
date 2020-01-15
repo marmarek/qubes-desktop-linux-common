@@ -66,10 +66,11 @@ class TestVM(object):
     # pylint: disable=too-few-public-methods
     app = TestApp()
 
-    def __init__(self, name, **kwargs):
+    def __init__(self, name, klass, **kwargs):
         self.running = False
         self.is_template = False
         self.name = name
+        self.klass = klass
         self.log = logging.getLogger('qubesappmenus.tests')
         self.features = TestFeatures(self)
         for k, v in kwargs.items():
@@ -90,16 +91,19 @@ class TC_00_Appmenus(unittest.TestCase):
         vmname = VMPREFIX + 'standalone'
         self.standalone = TestVM(
             name=vmname,
+            klass='StandaloneVM',
             updateable=True,
         )
         vmname = VMPREFIX + 'template'
         self.template = TestVM(
             name=vmname,
+            klass='TemplateVM',
             updateable=True,
         )
         vmname = VMPREFIX + 'vm'
         self.appvm = TestVM(
             name=vmname,
+            klass='AppVM',
             template=self.template,
             updateable=False,
         )
@@ -298,7 +302,7 @@ class TC_00_Appmenus(unittest.TestCase):
             p.wait = lambda: None
             p.returncode = 0
             return p
-        vm = TestVM('test-vm', run_service=_run)
+        vm = TestVM('test-vm', klass='TemplateVM', run_service=_run)
         appmenus = qubesappmenus.receive.get_appmenus(vm)
         expected_appmenus = {
             'org.gnome.Nautilus': {
@@ -434,15 +438,19 @@ class TC_00_Appmenus(unittest.TestCase):
                     qubesappmenus.basedir.encode()),
                 f.read()
             )
-        mock_subprocess.assert_called_once_with([
-            'xdg-desktop-menu', 'install', '--noupdate',
-            self.basedir + '/test-inst-app/apps/test-inst-app-vm.directory',
-            self.basedir + '/test-inst-app/apps/test-inst-app-evince.desktop',
-            self.basedir + '/test-inst-app/apps/test-inst-app-qubes-start'
-                           '.desktop',
-            self.basedir + '/test-inst-app/apps/test-inst-app-qubes-vm'
-                           '-settings.desktop',
-        ], env=unittest.mock.ANY)
+
+        mock_subprocess.assert_called_once()
+        args = mock_subprocess.call_args[0][0]
+        self.assertEqual(
+            args[:3],
+            ['xdg-desktop-menu', 'install', '--noupdate'])
+        prefix = self.basedir + '/test-inst-app/apps/test-inst-app-'
+        self.assertEqual(sorted(args[3:]), [
+            prefix + 'evince.desktop',
+            prefix + 'qubes-start.desktop',
+            prefix + 'qubes-vm-settings.desktop',
+            prefix + 'vm.directory'
+        ])
 
     @unittest.mock.patch('subprocess.check_call')
     def test_121_create_appvm_with_whitelist(self, mock_subprocess):
@@ -479,13 +487,18 @@ class TC_00_Appmenus(unittest.TestCase):
                     qubesappmenus.basedir.encode()),
                 f.read()
             )
-        mock_subprocess.assert_called_once_with([
-            'xdg-desktop-menu', 'install', '--noupdate',
-            self.basedir + '/test-inst-app/apps/test-inst-app-vm.directory',
-            self.basedir + '/test-inst-app/apps/test-inst-app-evince.desktop',
-            self.basedir + '/test-inst-app/apps/test-inst-app-qubes-vm'
-                           '-settings.desktop',
-        ], env=unittest.mock.ANY)
+
+        mock_subprocess.assert_called_once()
+        args = mock_subprocess.call_args[0][0]
+        self.assertEqual(
+            args[:3],
+            ['xdg-desktop-menu', 'install', '--noupdate'])
+        prefix = self.basedir + '/test-inst-app/apps/test-inst-app-'
+        self.assertEqual(sorted(args[3:]), [
+            prefix + 'evince.desktop',
+            prefix + 'qubes-vm-settings.desktop',
+            prefix + 'vm.directory'
+        ])
 
     def test_130_process_appmenus_templates(self):
         def _run(service, **kwargs):
