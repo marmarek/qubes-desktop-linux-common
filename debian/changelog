@@ -1,3 +1,20 @@
+qubes-desktop-linux-common (4.1.1-1) unstable; urgency=medium
+
+  [ Frédéric Pierret (fepitre) ]
+  * travis: switch to dom0 Fedora 31
+
+  [ Pawel Marczewski ]
+  * Properly create "Start" shortcut
+  * Remove fallback shortcuts for HVM machines
+  * Ensure a Start shortcut for all machines
+  * Remove unused imports
+  * appmenus test: don't depend on file order
+
+  [ Marek Marczykowski-Górecki ]
+  * tests: fix them when called as root
+
+ -- Marek Marczykowski-Górecki <marmarek@invisiblethingslab.com>  Fri, 17 Jan 2020 05:09:43 +0100
+
 qubes-desktop-linux-common (4.1.0-1) unstable; urgency=medium
 
   [ Frédéric Pierret (fepitre) ]
