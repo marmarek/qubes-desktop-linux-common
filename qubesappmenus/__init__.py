@@ -143,9 +143,7 @@ class Appmenus(object):
             source = source. \
                 replace('\nExec=', '\nX-Qubes-NonDispvmExec='). \
                 replace('\nX-Qubes-DispvmExec=', '\nExec=')
-        icon = vm.label.icon
-        if dispvm:
-            icon = icon.replace('appvm-', 'dispvm-')
+        icon = vm.icon
         data = source. \
             replace("%VMNAME%", vm.name). \
             replace("%VMDIR%", os.path.join(basedir, vm.name)). \
