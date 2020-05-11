@@ -28,7 +28,9 @@ jobs:
     - env: PYTHONPATH=~/core-admin-client:~/linux-utils/imgconverter
       script:
        - python3 -m pylint qubesappmenus
-       - python3 -m unittest -v qubesappmenus.tests
+       - python3 -m coverage run -m unittest -v qubesappmenus.tests
     - stage: deploy
       env: DIST_DOM0=fc31 TESTS_ONLY=
-      script: ~/qubes-builder/scripts/travis-deploy
+      script:
+       - codecov -F unittests
+       - ~/qubes-builder/scripts/travis-deploy

@@ -1,6 +1,8 @@
 # WARNING: those requirements are used only for travis-ci.org
 # they SHOULD NOT be used under normal conditions; use system package manager
 docutils
+codecov
+coverage
 pylint
 codecov
 lxml
