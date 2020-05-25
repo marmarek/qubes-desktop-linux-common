@@ -1,3 +1,15 @@
+qubes-desktop-linux-common (4.1.2-1) unstable; urgency=medium
+
+  [ Marek Marczykowski-Górecki ]
+  * Fix qubes.SyncAppMenus service
+  * travis: add test coverage reports
+  * appmenu: skip/remove DispVM-incompatible entries instead of failing
+
+  [ Marta Marczykowska-Górecka ]
+  * Added a --template option to qvm-appmenus
+
+ -- Marek Marczykowski-Górecki <marmarek@invisiblethingslab.com>  Mon, 25 May 2020 02:48:37 +0200
+
 qubes-desktop-linux-common (4.1.1-1) unstable; urgency=medium
 
   [ Frédéric Pierret (fepitre) ]
