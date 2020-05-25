@@ -67,16 +67,19 @@ class AppmenusSubdirs:
 class Appmenus(object):
     """Main class for menu entries handling"""
 
-    def templates_dirs(self, vm):
+    def templates_dirs(self, vm, template=None):
         """
 
         :type vm: qubes.vm.qubesvm.QubesVM
+        :type template: qubes.vm.qubesvm.QubesVM
         """
         dirs = []
         my_dir = os.path.join(basedir, vm.name,
                               AppmenusSubdirs.templates_subdir)
         dirs.append(my_dir)
-        if hasattr(vm, 'template'):
+        if template:
+            dirs.extend(self.templates_dirs(template))
+        elif hasattr(vm, 'template'):
             dirs.extend(self.templates_dirs(vm.template))
         return dirs
 
@@ -159,9 +162,9 @@ class Appmenus(object):
             dest_f.write(data)
         return True
 
-    def get_available_filenames(self, vm):
+    def get_available_filenames(self, vm, template=None):
         """Yield filenames of available .desktop files"""
-        templates_dirs = self.templates_dirs(vm)
+        templates_dirs = self.templates_dirs(vm, template)
         templates_dirs = (x for x in templates_dirs if os.path.isdir(x))
         if not templates_dirs:
             return
@@ -174,12 +177,12 @@ class Appmenus(object):
                 listed.add(filename)
                 yield os.path.join(template_dir, filename)
 
-    def get_available(self, vm, fields=None):
+    def get_available(self, vm, fields=None, template=None):
         """Get available menu entries for given VM
 
         Returns a generator of lists that contain fields to be outputted"""
         # TODO icon path (#2885)
-        for filename in self.get_available_filenames(vm):
+        for filename in self.get_available_filenames(vm, template):
             field_values = {}
             with open(filename) as file:
                 name = None
@@ -623,6 +626,11 @@ parser.add_argument(
     help='File field to append to output for --get-available; can be used'
          ' multiple times for multiple fields. This option changes output'
          ' format to pipe-("|") separated.')
+parser.add_argument(
+    '--template', action='store',
+    help='Use the following template for listed domains instead of their '
+         'actual template. Requires --get-available.'
+)
 
 
 def retrieve_list(path):
@@ -644,6 +652,8 @@ def main(args=None, app=None):
     appmenus = Appmenus()
     if args.source is not None:
         args.source = args.app.domains[args.source]
+    if args.template is not None:
+        args.template = args.app.domains[args.template]
     for vm in args.domains:
         # allow multiple actions
         # for remove still use just VM name (str), because VM may be already
@@ -685,7 +695,7 @@ def main(args=None, app=None):
                                              appmenus.get_available(vm)))
                 else:
                     for result in appmenus.get_available(
-                            vm, fields=args.fields):
+                            vm, fields=args.fields, template=args.template):
                         print('|'.join(result))
 
 
