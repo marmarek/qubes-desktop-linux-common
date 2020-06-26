@@ -44,6 +44,9 @@ Conflicts: evolution <= 2.4.1-5
 Provides: redhat-menus
 Obsoletes: redhat-menus
 
+Provides: gnome-menus
+Obsoletes: gnome-menus
+
 %description -n qubes-menus
 This package contains the XML files that describe the menu layout for
 GNOME and KDE, and the .desktop files that define the names and icons
