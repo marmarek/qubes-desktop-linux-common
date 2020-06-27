@@ -82,6 +82,17 @@ class TestVM(object):
     def __str__(self):
         return self.name
 
+    @property
+    def icon(self):
+        raw_icon_name = 'red'
+        if self.klass == 'TemplateVM':
+            return 'templatevm-' + raw_icon_name
+        if self.klass == 'DispVM':
+            return 'dispvm-' + raw_icon_name
+        if self.features.get('servicevm', False):
+            return 'servicevm-' + raw_icon_name
+        return 'appvm-' + raw_icon_name
+
 VMPREFIX = 'test-'
 
 class TC_00_Appmenus(unittest.TestCase):
