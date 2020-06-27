@@ -44,9 +44,6 @@ Conflicts: evolution <= 2.4.1-5
 Provides: redhat-menus
 Obsoletes: redhat-menus
 
-Provides: gnome-menus
-Obsoletes: gnome-menus
-
 %description -n qubes-menus
 This package contains the XML files that describe the menu layout for
 GNOME and KDE, and the .desktop files that define the names and icons
@@ -64,7 +61,6 @@ make DESTDIR=$RPM_BUILD_ROOT MANDIR=%{_mandir} install
 make -C doc DESTDIR=$RPM_BUILD_ROOT MANDIR=%{_mandir} install
 
 %post
-
 for i in /usr/share/qubes/icons/*.png ; do
     xdg-icon-resource install --noupdate --novendor --size 48 $i
 done
@@ -82,7 +78,6 @@ if [ "$1" = 0 ] ; then
 
     #xdg-desktop-menu uninstall /usr/share/qubes-appmenus/qubes-dispvm.directory /usr/share/qubes-appmenus/qubes-dispvm-*.desktop
 fi
-
 
 %files
 %defattr(-,root,root,-)
