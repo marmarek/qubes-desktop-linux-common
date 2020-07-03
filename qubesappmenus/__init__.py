@@ -530,7 +530,8 @@ class Appmenus(object):
         """
         vm.features['default-whitelist'] = ' '.join(applications_list)
 
-    def set_whitelist(self, vm, applications_list):
+    @staticmethod
+    def set_whitelist(vm, applications_list):
         """Update list of applications to be included in the menu
 
         :param vm: VM object
