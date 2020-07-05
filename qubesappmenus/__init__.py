@@ -247,8 +247,8 @@ class Appmenus(object):
             directory_changed = True
         appmenus = list(self.get_available_filenames(vm))
         changed_appmenus = []
-        if 'whitelist' in vm.features:
-            whitelist = vm.features['whitelist'].split(' ')
+        if 'menu-items' in vm.features:
+            whitelist = vm.features['menu-items'].split(' ')
             appmenus = [x for x in appmenus if os.path.basename(x) in whitelist]
         elif os.path.exists(self.whitelist_path(vm)):
             with open(self.whitelist_path(vm)) as whitelist_f:
@@ -399,8 +399,8 @@ class Appmenus(object):
             return
 
         whitelist = self.whitelist_path(vm)
-        if 'whitelist' in vm.features:
-            whitelist = vm.features['whitelist'].split(' ')
+        if 'menu-items' in vm.features:
+            whitelist = vm.features['menu-items'].split(' ')
         elif os.path.exists(whitelist):
             with open(whitelist) as whitelist_f:
                 whitelist = [line.strip() for line in whitelist_f]
@@ -482,15 +482,15 @@ class Appmenus(object):
                     'qubes-start.desktop.template'))
 
         source_whitelist_filename = 'vm-' + AppmenusSubdirs.whitelist
-        if src and ('default-whitelist' in src.features or \
+        if src and ('default-menu-items' in src.features or \
                 os.path.exists(os.path.join(
                     basedir, src.name, source_whitelist_filename))):
             vm.log.info("Creating default whitelisted apps list: {0}".
                         format(basedir + '/' + vm.name + '/' +
                                AppmenusSubdirs.whitelist))
-            if 'default-whitelist' in src.features:
-                vm.features['whitelist'] = \
-                    src.features['default-whitelist']
+            if 'default-menu-items' in src.features:
+                vm.features['menu-items'] = \
+                    src.features['default-menu-items']
             else:
                 self.set_whitelist(vm, retrieve_list(os.path.join(
                     basedir, src.name, source_whitelist_filename)))
@@ -501,10 +501,10 @@ class Appmenus(object):
             for prefix in ('', 'vm-', 'netvm-'):
                 whitelist = prefix + AppmenusSubdirs.whitelist
                 if os.path.exists(os.path.join(basedir, src.name, whitelist)) \
-                        and (prefix + 'whitelist') not in vm.features:
+                        and (prefix + 'menu-items') not in vm.features:
                     vm.log.info("Copying whitelisted apps list: {0}".
                                 format(whitelist))
-                    vm.features[prefix + 'whitelist'] = ' '.join(retrieve_list(
+                    vm.features[prefix + 'menu-items'] = ' '.join(retrieve_list(
                         os.path.join(basedir, src.name, whitelist)))
 
             vm.log.info("Creating/copying appmenus templates")
@@ -528,7 +528,7 @@ class Appmenus(object):
         :param vm: VM object
         :param applications_list: list of applications to include
         """
-        vm.features['default-whitelist'] = ' '.join(applications_list)
+        vm.features['default-menu-items'] = ' '.join(applications_list)
 
     @staticmethod
     def set_whitelist(vm, applications_list):
@@ -537,7 +537,7 @@ class Appmenus(object):
         :param vm: VM object
         :param applications_list: list of applications to include
         """
-        vm.features['whitelist'] = ' '.join(applications_list)
+        vm.features['menu-items'] = ' '.join(applications_list)
 
     def get_whitelist(self, vm):
         """Retrieve list of applications to be included in the menu
@@ -545,8 +545,8 @@ class Appmenus(object):
         :param vm: VM object
         :return: list of applications (.desktop file names), or None if not set
         """
-        if 'whitelist' in vm.features:
-            for entry in vm.features['whitelist'].split(' '):
+        if 'menu-items' in vm.features:
+            for entry in vm.features['menu-items'].split(' '):
                 entry = entry.strip()
                 if not entry:
                     continue
