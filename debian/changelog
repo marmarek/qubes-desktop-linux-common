@@ -1,3 +1,19 @@
+qubes-desktop-linux-common (4.1.3-1) unstable; urgency=medium
+
+  [ Marta Marczykowska-Górecka ]
+  * Fixed handling of spaces in qvm-sync-appmenus
+  * Changed qvm-appmenus to use new vm.icon property
+
+  [ Frédéric Pierret (fepitre) ]
+  * debian: fix dependency names
+  * debian: qubesimgconverter is a separate package now
+  * spec: solve conflict with gnome-menus
+  * Update travis
+  * Centralize menus location
+  * Use xfce menu as default qubes menu
+
+ -- Marek Marczykowski-Górecki <marmarek@invisiblethingslab.com>  Thu, 16 Jul 2020 06:09:49 +0200
+
 qubes-desktop-linux-common (4.1.2-1) unstable; urgency=medium
 
   [ Marek Marczykowski-Górecki ]
