@@ -231,7 +231,10 @@ class Appmenus(object):
         if not os.path.exists(appmenus_dir):
             os.makedirs(appmenus_dir)
 
-        dispvm = vm.features.check_with_template('appmenus-dispvm', False)
+        try:
+            dispvm = vm.features.get('appmenus-dispvm', False)
+        except qubesadmin.exc.QubesDaemonNoResponseError:
+            dispvm = False
 
         anything_changed = False
         directory_changed = False
