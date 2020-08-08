@@ -17,7 +17,7 @@ X-Python3-Version: >= 3.4
 Package: qubes-desktop-linux-common
 Architecture: any
 Depends:
- qubes3-qubesimgconverter,
+ python3-qubesimgconverter,
  python3-xdg,
  qubes-core-admin-client,
  ${python3:Depends},
