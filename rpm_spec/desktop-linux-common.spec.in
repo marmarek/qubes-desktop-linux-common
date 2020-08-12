@@ -23,7 +23,6 @@ Requires:	xorg-x11-utils
 Requires:	python%{python3_pkgversion}-qubesimgconverter
 Requires:	python%{python3_pkgversion}-qubesadmin
 Requires:	python%{python3_pkgversion}-pyxdg
-Requires:   qubes-manager
 
 %description
 Common code used for multiple desktop environments' Qubes integration
