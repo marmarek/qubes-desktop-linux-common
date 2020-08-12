@@ -1,3 +1,18 @@
+qubes-desktop-linux-common (4.1.4-1) unstable; urgency=medium
+
+  [ Marek Marczykowski-Górecki ]
+  * appmenus: make it more robust about appmenus-dispvm feature access
+
+  [ Marta Marczykowska-Górecka ]
+  * Removed dependency on qubesmanager
+  * Warn user against running qvm-sync-appmenus as root
+
+  [ Marek Marczykowski-Górecki ]
+  * debian: fix typo in dependency
+  * Fix conflicting --force-root argument
+
+ -- Marek Marczykowski-Górecki <marmarek@invisiblethingslab.com>  Wed, 12 Aug 2020 14:25:45 +0200
+
 qubes-desktop-linux-common (4.1.3-1) unstable; urgency=medium
 
   [ Marta Marczykowska-Górecka ]
