@@ -250,7 +250,10 @@ class Appmenus(object):
             directory_changed = True
         appmenus = list(self.get_available_filenames(vm))
         changed_appmenus = []
-        if os.path.exists(self.whitelist_path(vm)):
+        if 'menu-items' in vm.features:
+            whitelist = vm.features['menu-items'].split(' ')
+            appmenus = [x for x in appmenus if os.path.basename(x) in whitelist]
+        elif os.path.exists(self.whitelist_path(vm)):
             with open(self.whitelist_path(vm)) as whitelist_f:
                 whitelist = [x.rstrip() for x in whitelist_f]
             appmenus = [x for x in appmenus if os.path.basename(x) in whitelist]
@@ -399,7 +402,9 @@ class Appmenus(object):
             return
 
         whitelist = self.whitelist_path(vm)
-        if os.path.exists(whitelist):
+        if 'menu-items' in vm.features:
+            whitelist = vm.features['menu-items'].split(' ')
+        elif os.path.exists(whitelist):
             with open(whitelist) as whitelist_f:
                 whitelist = [line.strip() for line in whitelist_f]
         else:
@@ -480,25 +485,30 @@ class Appmenus(object):
                     'qubes-start.desktop.template'))
 
         source_whitelist_filename = 'vm-' + AppmenusSubdirs.whitelist
-        if src and os.path.exists(
-                os.path.join(basedir, src.name, source_whitelist_filename)):
+        if src and ('default-menu-items' in src.features or \
+                os.path.exists(os.path.join(
+                    basedir, src.name, source_whitelist_filename))):
             vm.log.info("Creating default whitelisted apps list: {0}".
                         format(basedir + '/' + vm.name + '/' +
                                AppmenusSubdirs.whitelist))
-            shutil.copy(
-                os.path.join(basedir, src.name, source_whitelist_filename),
-                os.path.join(basedir, vm.name, AppmenusSubdirs.whitelist))
+            if 'default-menu-items' in src.features:
+                vm.features['menu-items'] = \
+                    src.features['default-menu-items']
+            else:
+                self.set_whitelist(vm, retrieve_list(os.path.join(
+                    basedir, src.name, source_whitelist_filename)))
 
+        # NOTE: No need to copy whitelists from VM features as that is
+        # automatically done with clones
         if clone_from_src:
-            for whitelist in (
-                    AppmenusSubdirs.whitelist,
-                    'vm-' + AppmenusSubdirs.whitelist,
-                    'netvm-' + AppmenusSubdirs.whitelist):
-                if os.path.exists(os.path.join(basedir, src.name, whitelist)):
+            for prefix in ('', 'vm-', 'netvm-'):
+                whitelist = prefix + AppmenusSubdirs.whitelist
+                if os.path.exists(os.path.join(basedir, src.name, whitelist)) \
+                        and (prefix + 'menu-items') not in vm.features:
                     vm.log.info("Copying whitelisted apps list: {0}".
                                 format(whitelist))
-                    shutil.copy(os.path.join(basedir, src.name, whitelist),
-                                os.path.join(basedir, vm.name, whitelist))
+                    vm.features[prefix + 'menu-items'] = ' '.join(retrieve_list(
+                        os.path.join(basedir, src.name, whitelist)))
 
             vm.log.info("Creating/copying appmenus templates")
             src_dir = self.templates_dirs(src)[0]
@@ -521,23 +531,16 @@ class Appmenus(object):
         :param vm: VM object
         :param applications_list: list of applications to include
         """
-        if not os.path.exists(os.path.join(basedir, vm.name)):
-            return
-        with open(os.path.join(basedir, str(vm),
-                               'vm-' + AppmenusSubdirs.whitelist), 'w') as \
-                default_whitelist:
-            default_whitelist.write('\n'.join(applications_list))
+        vm.features['default-menu-items'] = ' '.join(applications_list)
 
-    def set_whitelist(self, vm, applications_list):
+    @staticmethod
+    def set_whitelist(vm, applications_list):
         """Update list of applications to be included in the menu
 
         :param vm: VM object
         :param applications_list: list of applications to include
         """
-        if not os.path.exists(os.path.join(basedir, vm.name)):
-            return
-        with open(self.whitelist_path(vm), 'w') as whitelist:
-            whitelist.write('\n'.join(applications_list))
+        vm.features['menu-items'] = ' '.join(applications_list)
 
     def get_whitelist(self, vm):
         """Retrieve list of applications to be included in the menu
@@ -545,6 +548,13 @@ class Appmenus(object):
         :param vm: VM object
         :return: list of applications (.desktop file names), or None if not set
         """
+        if 'menu-items' in vm.features:
+            for entry in vm.features['menu-items'].split(' '):
+                entry = entry.strip()
+                if not entry:
+                    continue
+                yield entry
+            return None
         if not os.path.exists(self.whitelist_path(vm)):
             return None
         with open(self.whitelist_path(vm), 'r') as whitelist:
@@ -642,9 +652,9 @@ def retrieve_list(path):
     :return: list of lines
     """
     if path == '-':
-        return sys.stdin.readlines()
+        return [x.rstrip() for x in sys.stdin.readlines()]
     with open(path, 'r') as file:
-        return file.readlines()
+        return [x.rstrip() for x in file.readlines()]
 
 
 def main(args=None, app=None):
