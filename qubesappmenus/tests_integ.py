@@ -71,18 +71,25 @@ class TC_10_AppmenusIntegration(qubes.tests.extra.ExtraTestCase):
         if os.path.exists(path):
             self.fail("Path {} exists while it should not".format(path))
 
-    def get_whitelist(self, whitelist_path):
-        self.assertPathExists(whitelist_path)
-        with open(whitelist_path) as f:
-            whitelisted = [x.rstrip() for x in f.readlines() if x.rstrip()]
-        return whitelisted
+    def get_whitelist(self, vm, fail_if_missing=True):
+        whitelisted = vm.features.get('menu-items', None)
+        if whitelisted is not None:
+            return whitelisted.split()
+        whitelist_path = os.path.join(qubesappmenus.basedir, vm.name,
+            qubesappmenus.AppmenusSubdirs.whitelist)
+        if os.path.exists(whitelist_path):
+            with open(whitelist_path) as f:
+                whitelisted = [x.rstrip() for x in f.readlines() if x.rstrip()]
+            return whitelisted
+        if fail_if_missing:
+            self.fail('appmenus list is missing '
+                      '(no \'menu-items\' feature, nor {} file)'.format(whitelist_path))
+        return None
 
     def test_000_created(self, vm=None):
         if vm is None:
             vm = self.vm
-        whitelist_path = os.path.join(qubesappmenus.basedir, vm.name,
-            qubesappmenus.AppmenusSubdirs.whitelist)
-        whitelisted = self.get_whitelist(whitelist_path)
+        whitelisted = self.get_whitelist(vm)
         self.assertPathExists(self.appmenus.appmenus_dir(vm))
         appmenus = os.listdir(self.appmenus.appmenus_dir(vm))
         self.assertTrue(all(x.startswith(vm.name + '-') for x in appmenus))
@@ -105,11 +112,9 @@ class TC_10_AppmenusIntegration(qubes.tests.extra.ExtraTestCase):
 
     def test_001_created_registered(self):
         """Check whether appmenus was registered in desktop environment"""
-        whitelist_path = os.path.join(qubesappmenus.basedir, self.vm.name,
-            qubesappmenus.AppmenusSubdirs.whitelist)
-        if not os.path.exists(whitelist_path):
+        whitelisted = self.get_whitelist(self.vm, fail_if_missing=False)
+        if whitelisted is None:
             self.skipTest("Appmenus whitelist does not exists")
-        whitelisted = self.get_whitelist(whitelist_path)
         for appmenu in whitelisted:
             if appmenu.endswith('.directory'):
                 subdir = 'desktop-directories'
@@ -122,11 +127,9 @@ class TC_10_AppmenusIntegration(qubes.tests.extra.ExtraTestCase):
 
     def test_002_unregistered_after_remove(self):
         """Check whether appmenus was unregistered after VM removal"""
-        whitelist_path = os.path.join(qubesappmenus.basedir, self.vm.name,
-            qubesappmenus.AppmenusSubdirs.whitelist)
-        if not os.path.exists(whitelist_path):
+        whitelisted = self.get_whitelist(self.vm, fail_if_missing=False)
+        if whitelisted is None:
             self.skipTest("Appmenus whitelist does not exists")
-        whitelisted = self.get_whitelist(whitelist_path)
         self.loop.run_until_complete(self.vm.remove_from_disk())
         for appmenu in whitelisted:
             if appmenu.endswith('.directory'):
@@ -155,8 +158,7 @@ class TC_10_AppmenusIntegration(qubes.tests.extra.ExtraTestCase):
         self.assertPathExists(self.appmenus.templates_dirs(tpl)[0])
         self.assertEqual(len(self.appmenus.template_icons_dirs(tpl)), 1)
         self.assertPathExists(self.appmenus.template_icons_dirs(tpl)[0])
-        self.assertPathExists(os.path.join(qubesappmenus.basedir, tpl.name,
-            qubesappmenus.AppmenusSubdirs.whitelist))
+        self.assertIsNotNone(tpl.features.get('menu-items', None))
 
         for appmenu in (os.path.join(d, f)
                 for d in self.appmenus.templates_dirs(
