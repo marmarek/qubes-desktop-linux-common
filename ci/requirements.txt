@@ -8,3 +8,4 @@ codecov
 lxml
 pyxdg
 Pillow
+numpy
