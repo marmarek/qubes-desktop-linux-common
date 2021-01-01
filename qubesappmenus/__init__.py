@@ -210,6 +210,69 @@ class Appmenus(object):
                     result.append(field_values.get(field, ''))
             yield result
 
+    qubes_vm_desktop = 'org.qubes-os.vm'
+    qubes_vm_desktop_settings = 'org.qubes-os.qubes-vm-settings'
+
+    def desktop_name(self, vm, appmenu_basename: str):
+        """Return the basename of a ``.desktop`` file.
+
+        :param vm: QubesVM object for the VM whose entry this is.
+        :param appmenu_basename: The basename of the appmenu, as provided by
+        the VM.  This is not marked as “untrusted” as it has already been
+        validated.
+        """
+        assert appmenu_basename.endswith('.desktop')
+        return '.'.join((self.qubes_vm_desktop, str(vm), appmenu_basename))
+
+    def settings_name(self, vm):
+        """Return the basename of the .desktop file for the “Qube Settings”
+        menu entry of a given VM..
+
+        :param vm: QubesVM object for the VM.
+        """
+        return '.'.join((self.qubes_vm_desktop_settings, str(vm), 'desktop'))
+
+    def _do_remove_appmenus(self, vm, appmenus_to_remove, appmenus_dir,
+            refresh_cache):
+        """Remove old appmenus
+
+        :param vm: QubesVM object for the VM.
+        :param appmenus_to_remove: List of appmenus to remove.
+        :param appmenus_dir: Appmenus directory.
+        :param refresh_cache: Refresh the cache?
+        """
+        old_appmenus = set((fname for fname in appmenus_to_remove
+                                  if self._is_old_path(fname)))
+        new_appmenus = set(appmenus_to_remove).difference(old_appmenus)
+
+        def _sort_entries(entry):
+            return sorted(entry, key=lambda x: not x.endswith('.directory'))
+
+        for bad_menus in (_sort_entries(old_appmenus),
+                          _sort_entries(new_appmenus)):
+            if bad_menus:
+                appmenus_to_remove_fnames = [os.path.join(appmenus_dir, x)
+                                             for x in bad_menus]
+                try:
+                    desktop_menu_cmd = ['xdg-desktop-menu', 'uninstall']
+                    if not refresh_cache:
+                        desktop_menu_cmd.append('--noupdate')
+                    desktop_menu_cmd.extend(appmenus_to_remove_fnames)
+                    desktop_menu_env = os.environ.copy()
+                    desktop_menu_env['LC_COLLATE'] = 'C'
+                    subprocess.check_call(desktop_menu_cmd,
+                                          env=desktop_menu_env)
+                except subprocess.CalledProcessError:
+                    if hasattr(vm, 'log'):
+                        vm.log.warning(
+                            "Problem removing appmenus for %s", vm.name)
+
+                    else:
+                        print(
+                            "Problem removing appmenus for {!s}".format(vm),
+                            file=sys.stderr)
+
+
     def appmenus_create(self, vm, force=False, refresh_cache=True):
         """Create/update .desktop files
 
@@ -240,7 +303,7 @@ class Appmenus(object):
 
         anything_changed = False
         directory_changed = False
-        directory_file = os.path.join(appmenus_dir, vm.name + '-vm.directory')
+        directory_file = self._directory_path(vm)
         if self.write_desktop_file(
                 vm,
                 pkg_resources.resource_string(
@@ -262,62 +325,53 @@ class Appmenus(object):
 
         for appmenu in appmenus:
             appmenu_basename = os.path.basename(appmenu)
+            fname = os.path.join(appmenus_dir,
+                                 self.desktop_name(vm, appmenu_basename))
             try:
-                if self.write_desktop_file(
-                        vm,
-                        appmenu,
-                        os.path.join(appmenus_dir,
-                                     '-'.join((vm.name, appmenu_basename))),
-                        dispvm):
-                    changed_appmenus.append(appmenu_basename)
+                if self.write_desktop_file(vm, appmenu, fname, dispvm):
+                    changed_appmenus.append(fname)
             except DispvmNotSupportedError:
                 # remove DispVM-incompatible entries
                 with contextlib.suppress(FileNotFoundError):
-                    os.unlink(os.path.join(
-                        appmenus_dir, '-'.join((vm.name, appmenu_basename))))
+                    os.unlink(fname)
+        vm_settings_fname = os.path.join(appmenus_dir, self.settings_name(vm))
         if self.write_desktop_file(
                 vm,
                 pkg_resources.resource_string(
                     __name__,
                     'qubes-vm-settings.desktop.template'
                 ).decode(),
-                os.path.join(appmenus_dir,
-                             '-'.join((vm.name, 'qubes-vm-settings.desktop')))):
-            changed_appmenus.append('qubes-vm-settings.desktop')
+                vm_settings_fname):
+            changed_appmenus.append(vm_settings_fname)
 
         if changed_appmenus:
             anything_changed = True
 
-        target_appmenus = ['-'.join((vm.name, os.path.basename(x)))
-                           for x in appmenus + ['qubes-vm-settings.desktop']]
+        target_appmenus = [self.desktop_name(vm, os.path.basename(x))
+                           for x in appmenus]
+        target_appmenus.append(os.path.basename(vm_settings_fname))
 
         # remove old entries
         installed_appmenus = os.listdir(appmenus_dir)
         installed_appmenus.remove(os.path.basename(directory_file))
         appmenus_to_remove = set(installed_appmenus).difference(set(
             target_appmenus))
-        if appmenus_to_remove:
-            appmenus_to_remove_fnames = [os.path.join(appmenus_dir, x)
-                                         for x in appmenus_to_remove]
-            try:
-                desktop_menu_cmd = ['xdg-desktop-menu', 'uninstall']
-                if not refresh_cache:
-                    desktop_menu_cmd.append('--noupdate')
-                desktop_menu_cmd.extend(appmenus_to_remove_fnames)
-                desktop_menu_env = os.environ.copy()
-                desktop_menu_env['LC_COLLATE'] = 'C'
-                subprocess.check_call(desktop_menu_cmd, env=desktop_menu_env)
-            except subprocess.CalledProcessError:
-                vm.log.warning("Problem removing old appmenus")
+        self._do_remove_appmenus(vm, appmenus_to_remove, appmenus_dir,
+                refresh_cache)
 
-            for appmenu in appmenus_to_remove_fnames:
-                try:
-                    os.unlink(appmenu)
-                except FileNotFoundError:
-                    pass
+        for appmenu in (os.path.join(appmenus_dir, x)
+                for x in appmenus_to_remove):
+            try:
+                if hasattr(vm, 'log'):
+                    vm.log.warning('Removing appmenu %r', appmenu)
+                os.unlink(appmenu)
+            except FileNotFoundError:
+                pass
 
         # add new entries
         if anything_changed or force:
+            # Only call ‘xdg-desktop-menu’ if it has at least one file argument
+            do_anything = False
             try:
                 desktop_menu_cmd = ['xdg-desktop-menu', 'install']
                 if not refresh_cache:
@@ -326,16 +380,20 @@ class Appmenus(object):
                 if (directory_changed and not changed_appmenus) or force:
                     # only directory file changed, not actual entries;
                     # re-register all of them to force refresh
-                    desktop_menu_cmd.extend(
-                        os.path.join(appmenus_dir, x)
-                        for x in target_appmenus)
-                else:
-                    desktop_menu_cmd.extend(
-                        os.path.join(appmenus_dir, '-'.join((vm.name, x)))
-                        for x in changed_appmenus)
-                desktop_menu_env = os.environ.copy()
-                desktop_menu_env['LC_COLLATE'] = 'C'
-                subprocess.check_call(desktop_menu_cmd, env=desktop_menu_env)
+                    if target_appmenus:
+                        desktop_menu_cmd.extend(
+                            os.path.join(appmenus_dir, x)
+                            for x in target_appmenus)
+                        do_anything = True
+                elif changed_appmenus:
+                    desktop_menu_cmd.extend(changed_appmenus)
+                    do_anything = True
+                if do_anything:
+                    desktop_menu_env = os.environ.copy()
+                    desktop_menu_env['LC_COLLATE'] = 'C'
+                    subprocess.check_call(
+                        desktop_menu_cmd,
+                        env=desktop_menu_env)
             except subprocess.CalledProcessError:
                 vm.log.warning("Problem creating appmenus for %s", vm.name)
 
@@ -343,6 +401,24 @@ class Appmenus(object):
             if 'KDE_SESSION_UID' in os.environ:
                 subprocess.call(['kbuildsycoca' +
                                  os.environ.get('KDE_SESSION_VERSION', '4')])
+
+    @staticmethod
+    def _is_old_path(name):
+        """Return if a path to a desktop name is for the old menu version.
+        """
+        return not (name.startswith('org.qubes-os.') or
+                    name.startswith('qubes-vm-directory-'))
+
+    def _old_directory_path(self, vm):
+        """Return the old path of the directory file for this VM
+        """
+        return os.path.join(self.appmenus_dir(vm), str(vm) + '.vm.directory')
+
+    def _directory_path(self, vm):
+        """Return the path of the directory file for this VM
+        """
+        basename = 'qubes-vm-directory-' + str(vm) + '.directory'
+        return os.path.join(self.appmenus_dir(vm), basename)
 
     def appmenus_remove(self, vm, refresh_cache=True):
         """Remove desktop files for particular VM
@@ -359,31 +435,8 @@ class Appmenus(object):
                     print("Removing appmenus for {!s}".format(vm),
                           file=sys.stderr)
             installed_appmenus = os.listdir(appmenus_dir)
-            directory_file = os.path.join(self.appmenus_dir(vm),
-                                          str(vm) + '-vm.directory')
-            installed_appmenus.remove(os.path.basename(directory_file))
-            if installed_appmenus:
-                appmenus_to_remove_fnames = [os.path.join(appmenus_dir, x)
-                                             for x in installed_appmenus]
-                try:
-                    desktop_menu_cmd = ['xdg-desktop-menu', 'uninstall']
-                    if not refresh_cache:
-                        desktop_menu_cmd.append('--noupdate')
-                    desktop_menu_cmd.append(directory_file)
-                    desktop_menu_cmd.extend(appmenus_to_remove_fnames)
-                    desktop_menu_env = os.environ.copy()
-                    desktop_menu_env['LC_COLLATE'] = 'C'
-                    subprocess.check_call(desktop_menu_cmd,
-                                          env=desktop_menu_env)
-                except subprocess.CalledProcessError:
-                    if hasattr(vm, 'log'):
-                        vm.log.warning(
-                            "Problem removing appmenus for %s", vm.name)
-
-                    else:
-                        print(
-                            "Problem removing appmenus for {!s}".format(vm),
-                            file=sys.stderr)
+            self._do_remove_appmenus(vm, installed_appmenus, appmenus_dir,
+                    refresh_cache)
             shutil.rmtree(appmenus_dir)
 
         if refresh_cache:

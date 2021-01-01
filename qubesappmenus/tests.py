@@ -127,6 +127,10 @@ class TC_00_Appmenus(unittest.TestCase):
             self.basedir)
         self.basedir_patch.start()
 
+    def _make_desktop_name(self, vm, appmenu_basename):
+        return os.path.join(self.ext.appmenus_dir(vm),
+                            self.ext.desktop_name(vm, appmenu_basename))
+
     def tearDown(self):
         self.basedir_patch.stop()
         self.basedir_obj.cleanup()
@@ -235,8 +239,7 @@ class TC_00_Appmenus(unittest.TestCase):
                 'test-data/evince.desktop.template'))
         self.ext.appmenus_create(appvm, refresh_cache=False)
         self.ext.appicons_create(appvm)
-        evince_path = os.path.join(
-            self.ext.appmenus_dir(appvm), appvm.name + '-evince.desktop')
+        evince_path = self._make_desktop_name(appvm, 'evince.desktop')
         self.assertPathExists(evince_path)
         with open(evince_path, 'rb') as f:
             self.assertEqual(
@@ -279,8 +282,7 @@ class TC_00_Appmenus(unittest.TestCase):
                 'test-data/evince.desktop.template').
                 replace(b'Document Viewer', b'Random Viewer'))
         self.ext.appmenus_update(appvm)
-        evince_path = os.path.join(
-            self.ext.appmenus_dir(appvm), appvm.name + '-evince.desktop')
+        evince_path = self._make_desktop_name(appvm, 'evince.desktop')
         self.assertPathExists(evince_path)
         with open(evince_path, 'rb') as f:
             self.assertEqual(
@@ -291,8 +293,7 @@ class TC_00_Appmenus(unittest.TestCase):
                 f.read()
             )
 
-        xterm_path = os.path.join(
-            self.ext.appmenus_dir(appvm), appvm.name + '-xterm.desktop')
+        xterm_path = self._make_desktop_name(appvm, 'xterm.desktop')
         self.assertPathExists(xterm_path)
         with open(xterm_path, 'rb') as f:
             self.assertEqual(
@@ -427,8 +428,9 @@ class TC_00_Appmenus(unittest.TestCase):
             provides_network=False,
             label=self.app.labels[1])
         self.ext.appmenus_init(tpl)
-        with open(os.path.join(self.ext.templates_dirs(tpl)[0],
-                'evince.desktop'), 'wb') as f:
+        old_path = os.path.join(self.ext.templates_dirs(tpl)[0],
+                                'evince.desktop')
+        with open(old_path, 'wb') as f:
             f.write(pkg_resources.resource_string(__name__,
                 'test-data/evince.desktop.template'))
         appvm = TestVM('test-inst-app',
@@ -438,10 +440,22 @@ class TC_00_Appmenus(unittest.TestCase):
             updateable=False,
             provides_network=False,
             label=self.app.labels[1])
+        appmenus_dir = self.ext.appmenus_dir(appvm)
+        self.assertEqual(appmenus_dir, self.basedir + '/test-inst-app/apps')
         self.ext.appmenus_init(appvm)
+        os.mkdir(appmenus_dir, mode=0o700)
+        self.assertEqual(os.listdir(appmenus_dir),[])
+        should_be_deleted = []
+        for i in 'desktop', 'directory':
+            for j in 'bad', 'org.qubes':
+                bad_path = os.path.join(appmenus_dir, j + '.' + i)
+                with open(bad_path, 'wb') as f:
+                    f.write(b'not a valid desktop file')
+                should_be_deleted.append(bad_path)
         self.ext.appmenus_create(appvm, refresh_cache=False)
-        evince_path = os.path.join(
-            self.ext.appmenus_dir(appvm), 'test-inst-app-evince.desktop')
+        for i in should_be_deleted:
+            self.assertPathNotExists(i)
+        evince_path = self._make_desktop_name(appvm, 'evince.desktop')
         self.assertPathExists(evince_path)
         with open(evince_path, 'rb') as f:
             self.assertEqual(
@@ -451,18 +465,31 @@ class TC_00_Appmenus(unittest.TestCase):
                 f.read()
             )
 
-        mock_subprocess.assert_called_once()
-        args = mock_subprocess.call_args[0][0]
+        retval = mock_subprocess.mock_calls
+        print([i[1] for i in retval ])
+        (_,(first_call,),_,), (_,(second_call,),_,), (_,(third_call,),_,), = retval
+        assert should_be_deleted[0].endswith('.desktop')
         self.assertEqual(
-            args[:3],
+            first_call[:],
+            ['xdg-desktop-menu', 'uninstall', '--noupdate', should_be_deleted[2], should_be_deleted[0]])
+        self.assertEqual(
+            second_call[:],
+            ['xdg-desktop-menu', 'uninstall', '--noupdate', should_be_deleted[3], should_be_deleted[1]])
+        self.assertEqual(
+            third_call[:3],
             ['xdg-desktop-menu', 'install', '--noupdate'])
-        prefix = self.basedir + '/test-inst-app/apps/test-inst-app-'
-        self.assertEqual(sorted(args[3:]), [
-            prefix + 'evince.desktop',
-            prefix + 'qubes-start.desktop',
-            prefix + 'qubes-vm-settings.desktop',
-            prefix + 'vm.directory'
-        ])
+        prefix = os.path.join(appmenus_dir, 'org.qubes-os.vm')
+        self.maxDiff = None
+        new_files = [
+            os.path.join(appmenus_dir, 'qubes-vm-directory-test-inst-app.directory'),
+            prefix + '-settings.test-inst-app.desktop',
+            prefix + '.test-inst-app.evince.desktop',
+            prefix + '.test-inst-app.qubes-start.desktop',
+        ]
+        self.assertEqual(third_call[3], new_files[0])
+        self.assertEqual(set(third_call[4:]), set(new_files[1:]))
+        self.assertEqual(sorted(os.listdir(appmenus_dir)),
+                         sorted(os.path.basename(i) for i in new_files))
 
     @unittest.mock.patch('subprocess.check_call')
     def test_121_create_appvm_with_whitelist(self, mock_subprocess):
@@ -489,8 +516,7 @@ class TC_00_Appmenus(unittest.TestCase):
             label=self.app.labels[1])
         self.ext.appmenus_init(appvm)
         self.ext.appmenus_create(appvm, refresh_cache=False)
-        evince_path = os.path.join(
-            self.ext.appmenus_dir(appvm), 'test-inst-app-evince.desktop')
+        evince_path = self._make_desktop_name(appvm, 'evince.desktop')
         self.assertPathExists(evince_path)
         with open(evince_path, 'rb') as f:
             self.assertEqual(
@@ -505,11 +531,12 @@ class TC_00_Appmenus(unittest.TestCase):
         self.assertEqual(
             args[:3],
             ['xdg-desktop-menu', 'install', '--noupdate'])
-        prefix = self.basedir + '/test-inst-app/apps/test-inst-app-'
-        self.assertEqual(sorted(args[3:]), [
-            prefix + 'evince.desktop',
-            prefix + 'qubes-vm-settings.desktop',
-            prefix + 'vm.directory'
+        prefix = self.basedir + '/test-inst-app/apps/org.qubes-os.vm'
+        self.maxDiff = None
+        self.assertEqual(args[3:], [
+            self.basedir + '/test-inst-app/apps/qubes-vm-directory-test-inst-app.directory',
+            prefix + '.test-inst-app.evince.desktop',
+            prefix + '-settings.test-inst-app.desktop',
         ])
 
     def test_130_process_appmenus_templates(self):
@@ -570,3 +597,6 @@ class TC_00_Appmenus(unittest.TestCase):
 
 def list_tests():
     return (TC_00_Appmenus,)
+
+if __name__ == '__main__':
+    unittest.main()
