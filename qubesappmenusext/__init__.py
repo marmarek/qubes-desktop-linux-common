@@ -31,8 +31,7 @@ class AppmenusExtension(qubes.ext.Extension):
         super(AppmenusExtension, self).__init__(*args)
         self.log = logging.getLogger('appmenus')
 
-    @asyncio.coroutine
-    def run_as_user(self, command):
+    async def run_as_user(self, command):
         '''
         Run given command (in subprocess.Popen acceptable format) as default
         normal user
@@ -47,31 +46,28 @@ class AppmenusExtension(qubes.ext.Extension):
             self.log.warning('Default user not found: ' + str(e))
             return
 
-        proc = yield from asyncio.create_subprocess_exec(
+        proc = await asyncio.create_subprocess_exec(
             'runuser', '-u', user, '--', 'env', 'DISPLAY=:0',
             *command)
-        yield from proc.wait()
+        await proc.wait()
         if proc.returncode != 0:
             self.log.warning('Command \'%s\' failed', ' '.join(command))
 
     @qubes.ext.handler('domain-create-on-disk')
-    @asyncio.coroutine
-    def create_on_disk(self, vm, event):
-        yield from self.run_as_user(
+    async def create_on_disk(self, vm, event):
+        await self.run_as_user(
             ['qvm-appmenus', '--quiet', '--init', '--create', vm.name])
 
 
     @qubes.ext.handler('domain-clone-files')
-    @asyncio.coroutine
-    def clone_disk_files(self, vm, event, src):
-        yield from self.run_as_user(
+    async def clone_disk_files(self, vm, event, src):
+        await self.run_as_user(
             ['qvm-appmenus', '--quiet', '--init', '--create', '--source=' + src.name,
             vm.name])
 
     @qubes.ext.handler('domain-remove-from-disk')
-    @asyncio.coroutine
-    def remove_from_disk(self, vm, event):
-        yield from self.run_as_user(
+    async def remove_from_disk(self, vm, event):
+        await self.run_as_user(
             ['qvm-appmenus', '--quiet', '--remove', vm.name])
 
     @qubes.ext.handler('property-set:label')
