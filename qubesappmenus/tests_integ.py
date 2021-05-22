@@ -92,12 +92,16 @@ class TC_10_AppmenusIntegration(qubes.tests.extra.ExtraTestCase):
         whitelisted = self.get_whitelist(vm)
         self.assertPathExists(self.appmenus.appmenus_dir(vm))
         appmenus = os.listdir(self.appmenus.appmenus_dir(vm))
-        self.assertTrue(all(x.startswith(vm.name + '-') for x in appmenus))
-        appmenus = [x[len(vm.name) + 1:] for x in appmenus]
-        self.assertIn('vm.directory', appmenus)
-        appmenus.remove('vm.directory')
-        self.assertIn('qubes-vm-settings.desktop', appmenus)
-        appmenus.remove('qubes-vm-settings.desktop')
+        settings = 'org.qubes-os.qubes-vm-settings.' + vm.name + '.desktop'
+        directory = 'qubes-vm-directory-{}.directory'.format(vm.name)
+        self.assertIn(settings, appmenus)
+        appmenus.remove(settings)
+        self.assertIn(directory, appmenus)
+        appmenus.remove(directory)
+        prefix = 'org.qubes-os.vm.' + vm.name + '.'
+        assert all(x.startswith(prefix) for x in appmenus)
+        appmenus = [x[len(prefix):] for x in appmenus]
+        assert all(x.endswith('.desktop') for x in appmenus)
         self.assertEquals(set(whitelisted), set(appmenus))
         self.assertPathExists(self.appmenus.icons_dir(vm))
         appicons = os.listdir(self.appmenus.icons_dir(vm))
@@ -105,7 +109,7 @@ class TC_10_AppmenusIntegration(qubes.tests.extra.ExtraTestCase):
         for appmenu in whitelisted:
             desktop = xdg.DesktopEntry.DesktopEntry(
                 os.path.join(self.appmenus.appmenus_dir(vm),
-                    '-'.join((vm.name, appmenu))))
+                    '.'.join(('org.qubes-os.vm', vm.name, appmenu))))
             if desktop.getIcon():
                 whitelisted_icons.add(os.path.basename(desktop.getIcon()))
         self.assertEquals(set(whitelisted_icons), set(appicons))
@@ -116,13 +120,18 @@ class TC_10_AppmenusIntegration(qubes.tests.extra.ExtraTestCase):
         if whitelisted is None:
             self.skipTest("Appmenus whitelist does not exists")
         for appmenu in whitelisted:
+            assert appmenu.endswith('.desktop')
             if appmenu.endswith('.directory'):
                 subdir = 'desktop-directories'
+                assert False, 'the previous test would fail before the appmenu rename'
             else:
                 subdir = 'applications'
             self.assertPathExists(os.path.join(
                 self.xdg_data_home, subdir,
-                '-'.join([self.vm.name, appmenu])))
+                '.'.join(['org.qubes-os.vm', self.vm.name, appmenu])))
+        self.assertPathExists(os.path.join(
+            self.xdg_data_home, subdir,
+            '.'.join(['org.qubes-os.qubes-vm-settings', self.vm.name, 'desktop'])))
         # TODO: some KDE specific dir?
 
     def test_002_unregistered_after_remove(self):
@@ -134,11 +143,15 @@ class TC_10_AppmenusIntegration(qubes.tests.extra.ExtraTestCase):
         for appmenu in whitelisted:
             if appmenu.endswith('.directory'):
                 subdir = 'desktop-directories'
+                assert False, 'the previous test would fail before the appmenu rename'
             else:
                 subdir = 'applications'
             self.assertPathNotExists(os.path.join(
                 self.xdg_data_home, subdir,
-                '-'.join([self.vm.name, appmenu])))
+                '.'.join(['org.qubes-os.vm', self.vm.name, appmenu])))
+        self.assertPathNotExists(os.path.join(
+            self.xdg_data_home, subdir,
+            '.'.join(['org.qubes-os.qubes-vm-settings', self.vm.name, 'desktop'])))
 
     def test_003_created_template_empty(self):
         tpl = self.app.add_new_vm(qubes.vm.templatevm.TemplateVM,

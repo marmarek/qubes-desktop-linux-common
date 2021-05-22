@@ -447,7 +447,7 @@ class TC_00_Appmenus(unittest.TestCase):
         self.assertEqual(os.listdir(appmenus_dir),[])
         should_be_deleted = []
         for i in 'desktop', 'directory':
-            for j in 'bad', 'org.qubes':
+            for j in 'bad', 'org.qubes-os':
                 bad_path = os.path.join(appmenus_dir, j + '.' + i)
                 with open(bad_path, 'wb') as f:
                     f.write(b'not a valid desktop file')
@@ -478,13 +478,13 @@ class TC_00_Appmenus(unittest.TestCase):
         self.assertEqual(
             third_call[:3],
             ['xdg-desktop-menu', 'install', '--noupdate'])
-        prefix = os.path.join(appmenus_dir, 'org.qubes-os.vm')
+        prefix = os.path.join(appmenus_dir, 'org.qubes-os.')
         self.maxDiff = None
         new_files = [
             os.path.join(appmenus_dir, 'qubes-vm-directory-test-inst-app.directory'),
-            prefix + '-settings.test-inst-app.desktop',
-            prefix + '.test-inst-app.evince.desktop',
-            prefix + '.test-inst-app.qubes-start.desktop',
+            prefix + 'qubes-vm-settings.test-inst-app.desktop',
+            prefix + 'vm.test-inst-app.evince.desktop',
+            prefix + 'vm.test-inst-app.qubes-start.desktop',
         ]
         self.assertEqual(third_call[3], new_files[0])
         self.assertEqual(set(third_call[4:]), set(new_files[1:]))
@@ -531,12 +531,12 @@ class TC_00_Appmenus(unittest.TestCase):
         self.assertEqual(
             args[:3],
             ['xdg-desktop-menu', 'install', '--noupdate'])
-        prefix = self.basedir + '/test-inst-app/apps/org.qubes-os.vm'
+        prefix = self.basedir + '/test-inst-app/apps/org.qubes-os.'
         self.maxDiff = None
         self.assertEqual(args[3:], [
             self.basedir + '/test-inst-app/apps/qubes-vm-directory-test-inst-app.directory',
-            prefix + '.test-inst-app.evince.desktop',
-            prefix + '-settings.test-inst-app.desktop',
+            prefix + 'vm.test-inst-app.evince.desktop',
+            prefix + 'qubes-vm-settings.test-inst-app.desktop',
         ])
 
     def test_130_process_appmenus_templates(self):
