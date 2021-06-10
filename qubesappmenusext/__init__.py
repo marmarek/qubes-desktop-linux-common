@@ -85,6 +85,14 @@ class AppmenusExtension(qubes.ext.Extension):
         asyncio.ensure_future(self.run_as_user(
             ['qvm-appmenus', '--quiet', '--force', '--update', vm.name]))
 
+    @qubes.ext.handler('domain-feature-pre-set:appmenus-dispvm')
+    def on_feature_pre_set_appmenus_dispvm(self, vm, event, feature,
+            value, oldvalue=None):
+        if value and not vm.template_for_dispvms:
+            raise qubes.exc.QubesValueError(
+                '{} cannot have feature ‘appmenus-dispvm’ because is not a '
+                'DispVM template'.format(vm.name))
+
     @qubes.ext.handler('domain-feature-set:appmenus-dispvm')
     def on_feature_set_appmenus_dispvm(self, vm, event, feature,
             value, oldvalue=None):
