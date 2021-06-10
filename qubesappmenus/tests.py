@@ -69,6 +69,7 @@ class TestVM(object):
     def __init__(self, name, klass, **kwargs):
         self.running = False
         self.is_template = False
+        self.template_for_dispvms=False
         self.name = name
         self.klass = klass
         self.log = logging.getLogger('qubesappmenus.tests')
