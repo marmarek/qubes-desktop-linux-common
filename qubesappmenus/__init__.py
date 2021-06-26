@@ -487,9 +487,8 @@ class Appmenus(object):
                     'qubes-start.desktop.template'))
 
         source_whitelist_filename = 'vm-' + AppmenusSubdirs.whitelist
-        if src and ('default-menu-items' in src.features or \
-                os.path.exists(os.path.join(
-                    basedir, src.name, source_whitelist_filename))):
+        if src and ('default-menu-items' in src.features or os.path.exists(
+                os.path.join(basedir, src.name, source_whitelist_filename))):
             vm.log.info("Creating default whitelisted apps list: {0}".
                         format(basedir + '/' + vm.name + '/' +
                                AppmenusSubdirs.whitelist))
@@ -632,9 +631,6 @@ parser.add_argument(
     action='store_true',
     help='required pledge for --get-available')
 parser.add_argument(
-    'domains', metavar='VMNAME', nargs='+',
-    help='VMs on which perform requested actions')
-parser.add_argument(
     '--file-field', action='append', dest='fields',
     help='File field to append to output for --get-available; can be used'
          ' multiple times for multiple fields. This option changes output'
@@ -644,6 +640,9 @@ parser.add_argument(
     help='Use the following template for listed domains instead of their '
          'actual template. Requires --get-available.'
 )
+parser.add_argument(
+    'domains', metavar='VMNAME', nargs='+',
+    help='VMs on which perform requested actions')
 
 
 def retrieve_list(path):
