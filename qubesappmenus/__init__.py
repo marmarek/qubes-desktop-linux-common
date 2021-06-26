@@ -638,10 +638,12 @@ parser.add_argument(
 parser.add_argument(
     '--template', action='store',
     help='Use the following template for listed domains instead of their '
-         'actual template. Requires --get-available.'
-)
+         'actual template. Requires --get-available.')
 parser.add_argument(
-    'domains', metavar='VMNAME', nargs='+',
+    '--all', action='store_true', dest='all_domains',
+    help='perform the action on all qubes')
+parser.add_argument(
+    'domains', metavar='VMNAME', nargs='*', default=[],
     help='VMs on which perform requested actions')
 
 
@@ -661,16 +663,26 @@ def retrieve_list(path):
 def main(args=None, app=None):
     """main function for qvm-appmenus tool"""
     args = parser.parse_args(args=args, app=app)
+    if not args.all_domains and not args.domains:
+        parser.error("one of the arguments --all VMNAME is required")
     appmenus = Appmenus()
     if args.source is not None:
         args.source = args.app.domains[args.source]
     if args.template is not None:
         args.template = args.app.domains[args.template]
-    for vm in args.domains:
+    if args.all_domains:
+        domains = args.app.domains
+    else:
+        domains = args.domains
+    for vm in domains:
+        if str(vm) == 'dom0':
+            continue
         # allow multiple actions
         # for remove still use just VM name (str), because VM may be already
-        # removed
+        # removed. It may be incompatible with --all option.
         if args.remove:
+            if isinstance(vm, qubesadmin.vm.QubesVM):
+                vm = vm.name
             appmenus.appmenus_remove(vm)
             appmenus.appicons_remove(vm)
             try:
@@ -679,7 +691,8 @@ def main(args=None, app=None):
                 pass
         # for other actions - get VM object
         if not args.remove:
-            vm = args.app.domains[vm]
+            if not isinstance(vm, qubesadmin.vm.QubesVM):
+                vm = args.app.domains[vm]
             if args.init:
                 appmenus.appmenus_init(vm, src=args.source)
             if args.get_whitelist:
