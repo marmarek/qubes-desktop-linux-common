@@ -671,7 +671,11 @@ def main(args=None, app=None):
     if args.template is not None:
         args.template = args.app.domains[args.template]
     if args.all_domains:
-        domains = args.app.domains
+        if args.remove:
+            domains = [vm for vm in os.listdir(os.path.abspath(basedir))
+                       if os.path.isdir(os.path.join(basedir, vm))]
+        else:
+            domains = args.app.domains
     else:
         domains = args.domains
     for vm in domains:
@@ -679,7 +683,7 @@ def main(args=None, app=None):
             continue
         # allow multiple actions
         # for remove still use just VM name (str), because VM may be already
-        # removed. It may be incompatible with --all option.
+        # removed.
         if args.remove:
             if isinstance(vm, qubesadmin.vm.QubesVM):
                 vm = vm.name
