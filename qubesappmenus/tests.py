@@ -522,7 +522,6 @@ class TC_00_Appmenus(unittest.TestCase):
             )
 
         retval = mock_subprocess.mock_calls
-        print([i[1] for i in retval ])
         (_,(first_call,),_,), (_,(second_call,),_,), (_,(third_call,),_,), = retval
         assert should_be_deleted[0].endswith('.desktop')
         self.assertEqual(
