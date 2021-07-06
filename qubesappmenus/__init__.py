@@ -67,6 +67,9 @@ class AppmenusSubdirs:
 class Appmenus(object):
     """Main class for menu entries handling"""
 
+    qubes_vm_desktop = 'org.qubes-os.vm'
+    qubes_vm_desktop_settings = 'org.qubes-os.qubes-vm-settings'
+
     def templates_dirs(self, vm, template=None):
         """
 
@@ -209,9 +212,6 @@ class Appmenus(object):
                 for field in fields:
                     result.append(field_values.get(field, ''))
             yield result
-
-    qubes_vm_desktop = 'org.qubes-os.vm'
-    qubes_vm_desktop_settings = 'org.qubes-os.qubes-vm-settings'
 
     def desktop_name(self, vm, appmenu_basename: str):
         """Return the basename of a ``.desktop`` file.
