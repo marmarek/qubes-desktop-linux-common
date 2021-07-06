@@ -303,6 +303,62 @@ class TC_00_Appmenus(unittest.TestCase):
                 f.read()
             )
 
+    def test_007_created_dispvm(self):
+        tpl = TestVM('test-inst-tpl',
+            klass='TemplateVM',
+            virt_mode='pvh',
+            updateable=True,
+            provides_network=False,
+            label=self.app.labels[1])
+        self.ext.appmenus_init(tpl)
+        appvm = TestVM('test-inst-dvm',
+            klass='AppVM',
+            template=tpl,
+            virt_mode='pvh',
+            updateable=False,
+            provides_network=False,
+            template_for_dispvms=True,
+            label=self.app.labels[1])
+        appvm.features['appmenus-dispvm'] = '1'
+        self.ext.appmenus_init(appvm)
+        with open(os.path.join(self.ext.templates_dirs(tpl)[0],
+                'evince.desktop'), 'wb') as f:
+            f.write(pkg_resources.resource_string(__name__,
+                'test-data/evince.desktop.template'))
+        self.ext.appmenus_create(appvm, refresh_cache=False)
+        self.ext.appicons_create(appvm)
+        appmenus_dir = self.ext.appmenus_dir(appvm)
+
+        # "Template (disp)" menu
+        dirfile_path = os.path.join(appmenus_dir,
+            'qubes-vm-directory-test-inst-dvm.directory')
+        self.assertPathExists(dirfile_path)
+        with open(dirfile_path, 'rb') as f:
+            content = f.read()
+            self.assertIn(b'Name=Template (disp): test-inst-dvm\n', content)
+        evince_path = os.path.join(appmenus_dir,
+            'org.qubes-os.vm.test-inst-dvm.evince.desktop')
+        self.assertPathExists(evince_path)
+        with open(evince_path, 'rb') as f:
+            content = f.read()
+            self.assertNotIn(b'X-Qubes-NonDispvmExec=', content)
+            self.assertIn(b'X-Qubes-DispvmExec=', content)
+
+        # "Disposable" menu
+        dirfile_path = os.path.join(appmenus_dir,
+            'qubes-dispvm-directory-test-inst-dvm.directory')
+        self.assertPathExists(dirfile_path)
+        with open(dirfile_path, 'rb') as f:
+            content = f.read()
+            self.assertIn(b'Name=Disposable: test-inst-dvm\n', content)
+        evince_path = os.path.join(appmenus_dir,
+            'org.qubes-os.dispvm.test-inst-dvm.evince.desktop')
+        self.assertPathExists(evince_path)
+        with open(evince_path, 'rb') as f:
+            content = f.read()
+            self.assertIn(b'X-Qubes-NonDispvmExec=', content)
+            self.assertNotIn(b'X-Qubes-DispvmExec=', content)
+
     def test_100_get_appmenus(self):
         self.maxDiff = None
         def _run(service, **kwargs):

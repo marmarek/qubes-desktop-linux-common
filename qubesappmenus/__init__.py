@@ -68,6 +68,7 @@ class Appmenus(object):
     """Main class for menu entries handling"""
 
     qubes_vm_desktop = 'org.qubes-os.vm'
+    qubes_dispvm_desktop = 'org.qubes-os.dispvm'
     qubes_vm_desktop_settings = 'org.qubes-os.qubes-vm-settings'
 
     def templates_dirs(self, vm, template=None):
@@ -124,6 +125,8 @@ class Appmenus(object):
         """File name of desktop directory entry template"""
         if dispvm:
             return 'qubes-dispvm.directory.template'
+        if getattr(vm, 'template_for_dispvms', False):
+            return 'qubes-templatedispvm.directory.template'
         if vm.klass == 'TemplateVM':
             return 'qubes-templatevm.directory.template'
         if vm.provides_network:
@@ -149,7 +152,11 @@ class Appmenus(object):
             source = source. \
                 replace('\nExec=', '\nX-Qubes-NonDispvmExec='). \
                 replace('\nX-Qubes-DispvmExec=', '\nExec=')
-        icon = vm.icon
+        if dispvm:
+            # menu directory for creating new DispVMs is special
+            icon = 'dispvm-' + vm.label.name
+        else:
+            icon = vm.icon
         data = source. \
             replace("%VMNAME%", vm.name). \
             replace("%VMDIR%", os.path.join(basedir, vm.name)). \
@@ -213,7 +220,7 @@ class Appmenus(object):
                     result.append(field_values.get(field, ''))
             yield result
 
-    def desktop_name(self, vm, appmenu_basename: str):
+    def desktop_name(self, vm, appmenu_basename: str, dispvm=False):
         """Return the basename of a ``.desktop`` file.
 
         :param vm: QubesVM object for the VM whose entry this is.
@@ -222,7 +229,11 @@ class Appmenus(object):
         validated.
         """
         assert appmenu_basename.endswith('.desktop')
-        return '.'.join((self.qubes_vm_desktop, str(vm), appmenu_basename))
+        if dispvm:
+            prefix = self.qubes_dispvm_desktop
+        else:
+            prefix = self.qubes_vm_desktop
+        return '.'.join((prefix, str(vm), appmenu_basename))
 
     def settings_name(self, vm):
         """Return the basename of the .desktop file for the “Qube Settings”
@@ -290,9 +301,6 @@ class Appmenus(object):
 
         if hasattr(vm, 'log'):
             vm.log.info("Creating appmenus")
-        appmenus_dir = self.appmenus_dir(vm)
-        if not os.path.exists(appmenus_dir):
-            os.makedirs(appmenus_dir)
 
         try:
             dispvm = (vm.template_for_dispvms and
@@ -300,10 +308,35 @@ class Appmenus(object):
         except (qubesadmin.exc.QubesDaemonNoResponseError,
                 qubesadmin.exc.QubesNoSuchPropertyError):
             dispvm = False
+        self._appmenus_create_onedir(
+            vm, force=force, refresh_cache=refresh_cache, dispvm=False,
+            keep_dispvm=dispvm)
+
+        if dispvm:
+            self._appmenus_create_onedir(
+                vm, force=force, refresh_cache=refresh_cache, dispvm=True)
+
+    def _appmenus_create_onedir(self, vm, force=False, refresh_cache=True,
+                                dispvm=False, keep_dispvm=False):
+        """Create/update .desktop files
+
+        :param vm: QubesVM object for which create entries
+        :param refresh_cache: refresh desktop environment cache; if false,
+        must be refreshed manually later
+        :param force: force re-registering files even if unchanged
+        :param dispvm: whether create entries for launching new DispVM
+        :param keep_dispvm: do not remove DispVM-related files,
+        to be used together with dispvm=False
+        :return: None
+        """
+
+        appmenus_dir = self.appmenus_dir(vm)
+        if not os.path.exists(appmenus_dir):
+            os.makedirs(appmenus_dir)
 
         anything_changed = False
         directory_changed = False
-        directory_file = self._directory_path(vm)
+        directory_file = self._directory_path(vm, dispvm=dispvm)
         if self.write_desktop_file(
                 vm,
                 pkg_resources.resource_string(
@@ -326,7 +359,8 @@ class Appmenus(object):
         for appmenu in appmenus:
             appmenu_basename = os.path.basename(appmenu)
             fname = os.path.join(appmenus_dir,
-                                 self.desktop_name(vm, appmenu_basename))
+                                 self.desktop_name(vm, appmenu_basename,
+                                                   dispvm=dispvm))
             try:
                 if self.write_desktop_file(vm, appmenu, fname, dispvm):
                     changed_appmenus.append(fname)
@@ -334,28 +368,42 @@ class Appmenus(object):
                 # remove DispVM-incompatible entries
                 with contextlib.suppress(FileNotFoundError):
                     os.unlink(fname)
-        vm_settings_fname = os.path.join(appmenus_dir, self.settings_name(vm))
-        if self.write_desktop_file(
-                vm,
-                pkg_resources.resource_string(
-                    __name__,
-                    'qubes-vm-settings.desktop.template'
-                ).decode(),
-                vm_settings_fname):
-            changed_appmenus.append(vm_settings_fname)
+
+        target_appmenus = [
+            self.desktop_name(vm, os.path.basename(x), dispvm=dispvm)
+            for x in appmenus]
+
+        if not dispvm:
+            vm_settings_fname = os.path.join(
+                appmenus_dir, self.settings_name(vm))
+            if self.write_desktop_file(
+                    vm,
+                    pkg_resources.resource_string(
+                        __name__,
+                        'qubes-vm-settings.desktop.template'
+                    ).decode(),
+                    vm_settings_fname):
+                changed_appmenus.append(vm_settings_fname)
+            target_appmenus.append(os.path.basename(vm_settings_fname))
 
         if changed_appmenus:
             anything_changed = True
-
-        target_appmenus = [self.desktop_name(vm, os.path.basename(x))
-                           for x in appmenus]
-        target_appmenus.append(os.path.basename(vm_settings_fname))
 
         # remove old entries
         installed_appmenus = os.listdir(appmenus_dir)
         installed_appmenus.remove(os.path.basename(directory_file))
         appmenus_to_remove = set(installed_appmenus).difference(set(
             target_appmenus))
+        if keep_dispvm:
+            appmenus_to_remove = [
+                x for x in appmenus_to_remove
+                if not x.startswith(self.qubes_dispvm_desktop) and
+                   not x.startswith('qubes-dispvm-directory-')]
+        elif dispvm:
+            appmenus_to_remove = [
+                x for x in appmenus_to_remove
+                if not x.startswith(self.qubes_vm_desktop) and
+                   not x.startswith('qubes-vm-directory-')]
         self._do_remove_appmenus(vm, appmenus_to_remove, appmenus_dir,
                 refresh_cache)
 
@@ -414,10 +462,14 @@ class Appmenus(object):
         """
         return os.path.join(self.appmenus_dir(vm), str(vm) + '.vm.directory')
 
-    def _directory_path(self, vm):
+    def _directory_path(self, vm, dispvm=False):
         """Return the path of the directory file for this VM
         """
-        basename = 'qubes-vm-directory-' + str(vm) + '.directory'
+        if dispvm:
+            basename = (
+               'qubes-dispvm-directory-' + str(vm) + '.directory')
+        else:
+            basename = 'qubes-vm-directory-' + str(vm) + '.directory'
         return os.path.join(self.appmenus_dir(vm), basename)
 
     def appmenus_remove(self, vm, refresh_cache=True):
